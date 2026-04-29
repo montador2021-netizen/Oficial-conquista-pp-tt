@@ -480,18 +480,23 @@ const App: React.FC = () => {
     try {
       const { error } = await supabase.from('sales').update({ status: 'cancelado' }).eq('id', sale.id);
       if (error) throw error;
+      
       // Atualizar estado local
-      setSavedSales(prev => prev.map(s => s.id === sale.id ? { ...s, status: 'cancelado' } : s));
-      // Atualizar localStorage
-      const updatedSales = savedSales.map(s => s.id === sale.id ? { ...s, status: 'cancelado' } : s);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedSales));
+      setSavedSales(prev => {
+        const updated = prev.map(s => s.id === sale.id ? { ...s, status: 'cancelado' } : s);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+        return updated;
+      });
     } catch (error) {
       console.error("Erro ao cancelar venda:", error);
     }
   };
 
   const deleteSale = async (sale: Sale) => {
+    console.log("Iniciando exclusão da venda:", sale);
+    
     if (!sale.id) {
+      console.log("Pedido sem ID, removendo pendente...");
       const pending = JSON.parse(localStorage.getItem('pending_sales') || '[]');
       const updatedPending = pending.filter((s: Sale) => s.numeroPedido !== sale.numeroPedido);
       localStorage.setItem('pending_sales', JSON.stringify(updatedPending));
@@ -501,14 +506,21 @@ const App: React.FC = () => {
     }
 
     try {
+      console.log("Chamando Supabase para deletar ID:", sale.id);
       const { error } = await supabase.from('sales').delete().eq('id', sale.id);
       if (error) throw error;
-      setSavedSales(prev => prev.filter(s => s.id !== sale.id));
-      const updatedSales = savedSales.filter(s => s.id !== sale.id);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedSales));
+      
+      console.log("Exclusão no Supabase bem-sucedida.");
+      setSavedSales(prev => {
+        const updated = prev.filter(s => s.id !== sale.id);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+        return updated;
+      });
       setSaleToDelete(null);
+      console.log("Estado atualizado e modal fechado.");
     } catch (error) {
       console.error("Erro ao excluir venda:", error);
+      alert("Erro ao excluir pedido: " + (error instanceof Error ? error.message : String(error)));
     }
   };
 

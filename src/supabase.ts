@@ -1,7 +1,10 @@
 import { createClient } from '@supabase/supabase-js';
 
-// Hardcoded para garantir funcionamento imediato no ambiente de preview
-const supabaseUrl = 'https://wmvvbapospxwcsryvruh.supabase.co';
-const supabaseAnonKey = 'sb_publishable_tphjRVsR6rMNghrrYurP8A_zRoSImqk';
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+
+if (!supabaseUrl || !supabaseAnonKey) {
+  console.error("Supabase environment variables are missing.");
+}
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
