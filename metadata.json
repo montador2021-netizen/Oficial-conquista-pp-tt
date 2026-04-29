@@ -1,0 +1,8 @@
+{
+  "name": "Teste: Oficial Conquista App",
+  "description": "Ecossistema de Gestão e Performance Conquista.",
+  "requestFramePermissions": [
+    "camera"
+  ],
+  "majorCapabilities": []
+}
