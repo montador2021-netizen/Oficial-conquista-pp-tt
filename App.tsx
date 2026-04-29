@@ -518,9 +518,23 @@ const App: React.FC = () => {
       });
       setSaleToDelete(null);
       console.log("Estado atualizado e modal fechado.");
-    } catch (error) {
+    } catch (error: any) {
       console.error("Erro ao excluir venda:", error);
-      alert("Erro ao excluir pedido: " + (error instanceof Error ? error.message : String(error)));
+      
+      // Serialização robusta para evitar [object Object] nos alertas
+      const getErrorMessage = (err: any) => {
+        if (typeof err === 'string') return err;
+        if (err instanceof Error) return err.message;
+        if (typeof err === 'object' && err !== null) {
+          // Tenta extrair a mensagem do Supabase se existir
+          if (err.message) return err.message;
+          if (err.error) return err.error;
+          try { return JSON.stringify(err); } catch { return String(err); }
+        }
+        return String(err);
+      };
+
+      alert("Erro ao excluir pedido: " + getErrorMessage(error));
     }
   };
 
