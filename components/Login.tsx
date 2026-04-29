@@ -56,7 +56,9 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
       }
 
       if (existingUser) {
-        if (existingUser.password === senha) {
+        if (existingUser.active === false) {
+           setError('Usuário bloqueado pelo administrador.');
+        } else if (existingUser.password === senha) {
           onLogin(existingUser as User);
         } else {
           setError('Senha incorreta.');
@@ -76,7 +78,8 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
           password: senha,
           role: (firstName.toLowerCase() === 'valmir' && lastName.toLowerCase() === 'melo') ? 'admin' : 'vendedor',
           lastLogin: new Date().toISOString(),
-          photoUrl: "https://picsum.photos/seed/" + customId + "/100/100"
+          photoUrl: "https://picsum.photos/seed/" + customId + "/100/100",
+          active: true
         };
 
         const { error: insertError } = await supabase.from('users').insert([newUser]);
