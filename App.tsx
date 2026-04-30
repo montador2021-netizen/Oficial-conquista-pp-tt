@@ -238,7 +238,7 @@ const App: React.FC = () => {
       if (pending.length > 0) {
         for (const sale of pending) {
           try {
-            const { error } = await supabase.from('sales').insert([sale]);
+            const { error } = await supabase.from('vendas').insert([sale]);
             if (error) throw error;
             // Atualizar estatísticas do cliente se vinculado
             if (sale.clienteId) {
@@ -295,7 +295,7 @@ const App: React.FC = () => {
       
       console.log("Buscando dados no Supabase...");
       try {
-        let query = supabase.from('sales').select('*');
+        let query = supabase.from('vendas').select('*');
         
         // Se não for admin, filtra apenas as próprias vendas
         if (!isAdmin) {
@@ -478,7 +478,7 @@ const App: React.FC = () => {
     }
 
     try {
-      const { error } = await supabase.from('sales').update({ status: 'cancelado' }).eq('id', sale.id);
+      const { error } = await supabase.from('vendas').update({ status: 'cancelado' }).eq('id', sale.id);
       if (error) throw error;
       
       // Atualizar estado local
@@ -507,7 +507,7 @@ const App: React.FC = () => {
 
     try {
       console.log("Chamando Supabase para deletar ID:", sale.id);
-      const { error } = await supabase.from('sales').delete().eq('id', sale.id);
+      const { error } = await supabase.from('vendas').delete().eq('id', sale.id);
       if (error) throw error;
       
       console.log("Exclusão no Supabase bem-sucedida.");
@@ -576,7 +576,7 @@ const App: React.FC = () => {
     // 3. Tentar sincronizar com Supabase
     try {
       console.log("Tentando sincronizar com Supabase...");
-      const { error } = await supabase.from('sales').insert([saleObj]);
+      const { error } = await supabase.from('vendas').insert([saleObj]);
       if (error) throw error;
       console.log("Sincronizado com sucesso!");
     } catch (error) {
@@ -1485,7 +1485,7 @@ const App: React.FC = () => {
                     <button 
                       onClick={async () => {
                         const handleFinalizeRetorno = async () => {
-                          const { error } = await supabase.from('sales').update({ statusRetorno: 'finalizado' }).eq('id', sale.id);
+                          const { error } = await supabase.from('vendas').update({ statusRetorno: 'finalizado' }).eq('id', sale.id);
                           if (error) console.error("Erro ao finalizar retorno:", error);
                         };
                         handleFinalizeRetorno();
