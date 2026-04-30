@@ -522,14 +522,17 @@ const App: React.FC = () => {
       console.error("Erro ao excluir venda - Objeto completo:", error);
       
       let msg = "Erro desconhecido";
-      if (error && typeof error === 'object') {
-        // Supabase error format
-        if (error.message) msg = error.message;
-        else if (error.error_description) msg = error.error_description;
-        else if (error.error) msg = error.error;
-        else msg = JSON.stringify(error);
-      } else {
-        msg = String(error);
+      try {
+        if (error instanceof Error) {
+          msg = error.message;
+        } else if (typeof error === 'object' && error !== null) {
+          // Supabase error format or general object
+          msg = error.message || error.error || error.details || JSON.stringify(error, null, 2);
+        } else {
+          msg = String(error);
+        }
+      } catch (e) {
+        msg = "Erro ao processar erro: " + String(e);
       }
 
       alert("Erro ao excluir pedido: " + msg);
