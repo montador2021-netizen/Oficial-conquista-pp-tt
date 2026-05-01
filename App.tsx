@@ -140,6 +140,12 @@ const App: React.FC = () => {
   const [vendedores, setVendedores] = useState<User[]>([]);
   const isAdmin = user?.role === 'admin';
 
+  const testFetch = async () => {
+    const { data, error } = await supabase.from('vendas').select('numero_pedido');
+    console.log("Teste de busca por numero_pedido:", data, "Erro:", error);
+  };
+  useEffect(() => { testFetch(); }, []);
+
   const handleLogin = (loggedUser: User) => {
     setUser(loggedUser);
     localStorage.setItem('currentUser', JSON.stringify(loggedUser));
@@ -469,7 +475,7 @@ const App: React.FC = () => {
 
   const cancelSale = async (sale: Sale) => {
     // Se for um pedido pendente (sem ID), remove do localStorage
-    if (!sale.id) {
+    if (!sale.numeroPedido) {
       const pending = JSON.parse(localStorage.getItem('pending_sales') || '[]');
       const updatedPending = pending.filter((s: Sale) => s.numeroPedido !== sale.numeroPedido);
       localStorage.setItem('pending_sales', JSON.stringify(updatedPending));
@@ -478,12 +484,12 @@ const App: React.FC = () => {
     }
 
     try {
-      const { error } = await supabase.from('vendas').update({ status: 'cancelado' }).eq('id', sale.id);
+      const { error } = await supabase.from('vendas').update({ status: 'cancelado' }).eq('numero_pedido', sale.numeroPedido);
       if (error) throw error;
       
       // Atualizar estado local
       setSavedSales(prev => {
-        const updated = prev.map(s => s.id === sale.id ? { ...s, status: 'cancelado' } : s);
+        const updated = prev.map(s => s.numeroPedido === sale.numeroPedido ? { ...s, status: 'cancelado' } : s);
         localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
         return updated;
       });
@@ -492,51 +498,12 @@ const App: React.FC = () => {
     }
   };
 
-  const deleteSale = async (sale: Sale) => {
-    console.log("Iniciando exclusão da venda:", sale);
+  const handleCancelOrder = async (sale: Sale) => {
+    console.log("Iniciando cancelamento da venda:", sale);
     
-    if (!sale.id) {
-      console.log("Pedido sem ID, removendo pendente...");
-      const pending = JSON.parse(localStorage.getItem('pending_sales') || '[]');
-      const updatedPending = pending.filter((s: Sale) => s.numeroPedido !== sale.numeroPedido);
-      localStorage.setItem('pending_sales', JSON.stringify(updatedPending));
-      setSavedSales(prev => prev.filter(s => s.numeroPedido !== sale.numeroPedido));
-      setSaleToDelete(null);
-      return;
-    }
-
-    try {
-      console.log("Chamando Supabase para deletar ID:", sale.id);
-      const { error } = await supabase.from('vendas').delete().eq('id', sale.id);
-      if (error) throw error;
-      
-      console.log("Exclusão no Supabase bem-sucedida.");
-      setSavedSales(prev => {
-        const updated = prev.filter(s => s.id !== sale.id);
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-        return updated;
-      });
-      setSaleToDelete(null);
-      console.log("Estado atualizado e modal fechado.");
-    } catch (error: any) {
-      console.error("Erro ao excluir venda - Objeto completo:", error);
-      
-      let msg = "Erro desconhecido";
-      try {
-        if (error instanceof Error) {
-          msg = error.message;
-        } else if (typeof error === 'object' && error !== null) {
-          // Supabase error format or general object
-          msg = error.message || error.error || error.details || JSON.stringify(error, null, 2);
-        } else {
-          msg = String(error);
-        }
-      } catch (e) {
-        msg = "Erro ao processar erro: " + String(e);
-      }
-
-      alert("Erro ao excluir pedido: " + msg);
-    }
+    // Agora usando o mesmo cancelSale (cancelar em vez de apagar)
+    await cancelSale(sale);
+    setSaleToDelete(null);
   };
 
   const handleLogout = () => {
@@ -1485,7 +1452,7 @@ const App: React.FC = () => {
                     <button 
                       onClick={async () => {
                         const handleFinalizeRetorno = async () => {
-                          const { error } = await supabase.from('vendas').update({ statusRetorno: 'finalizado' }).eq('id', sale.id);
+                          const { error } = await supabase.from('vendas').update({ statusRetorno: 'finalizado' }).eq('numero_pedido', sale.numeroPedido);
                           if (error) console.error("Erro ao finalizar retorno:", error);
                         };
                         handleFinalizeRetorno();
@@ -2025,10 +1992,10 @@ const App: React.FC = () => {
                 Voltar
               </button>
               <button 
-                onClick={() => deleteSale(saleToDelete)}
+                onClick={() => handleCancelOrder(saleToDelete)}
                 className="flex-1 bg-red-600 text-white py-3 rounded-xl font-black text-[10px] uppercase shadow-lg shadow-red-500/20"
               >
-                Excluir
+                Cancelar
               </button>
             </div>
           </motion.div>
