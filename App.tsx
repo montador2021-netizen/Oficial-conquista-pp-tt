@@ -498,12 +498,36 @@ const App: React.FC = () => {
     }
   };
 
-  const handleCancelOrder = async (sale: Sale) => {
-    console.log("Iniciando cancelamento da venda:", sale);
+  const deleteSale = async (sale: Sale) => {
+    console.log("Iniciando exclusão da venda:", sale);
     
-    // Agora usando o mesmo cancelSale (cancelar em vez de apagar)
-    await cancelSale(sale);
-    setSaleToDelete(null);
+    if (!sale.numeroPedido) {
+      console.log("Pedido sem ID, removendo pendente...");
+      const pending = JSON.parse(localStorage.getItem('pending_sales') || '[]');
+      const updatedPending = pending.filter((s: Sale) => s.numeroPedido !== sale.numeroPedido);
+      localStorage.setItem('pending_sales', JSON.stringify(updatedPending));
+      setSavedSales(prev => prev.filter(s => s.numeroPedido !== sale.numeroPedido));
+      setSaleToDelete(null);
+      return;
+    }
+
+    try {
+      console.log("Chamando Supabase para deletar numero_pedido:", sale.numeroPedido);
+      const { error } = await supabase.from('vendas').delete().eq('numero_pedido', sale.numeroPedido);
+      if (error) throw error;
+      
+      console.log("Exclusão no Supabase bem-sucedida.");
+      setSavedSales(prev => {
+        const updated = prev.filter(s => s.numeroPedido !== sale.numeroPedido);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+        return updated;
+      });
+      setSaleToDelete(null);
+      console.log("Estado atualizado e modal fechado.");
+    } catch (error: any) {
+      console.error("Erro ao excluir venda:", error);
+      alert("Erro ao excluir pedido: " + (error.message || String(error)));
+    }
   };
 
   const handleLogout = () => {
@@ -1992,10 +2016,10 @@ const App: React.FC = () => {
                 Voltar
               </button>
               <button 
-                onClick={() => handleCancelOrder(saleToDelete)}
+                onClick={() => deleteSale(saleToDelete)}
                 className="flex-1 bg-red-600 text-white py-3 rounded-xl font-black text-[10px] uppercase shadow-lg shadow-red-500/20"
               >
-                Cancelar
+                Excluir
               </button>
             </div>
           </motion.div>
