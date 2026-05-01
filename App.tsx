@@ -141,8 +141,8 @@ const App: React.FC = () => {
   const isAdmin = user?.role === 'admin';
 
   const testFetch = async () => {
-    const { data, error } = await supabase.from('vendas').select('numero_pedido');
-    console.log("Teste de busca por numero_pedido:", data, "Erro:", error);
+    const { data, error } = await supabase.from('vendas').select('numeropedido');
+    console.log("Teste de busca por numeropedido:", data, "Erro:", error);
   };
   useEffect(() => { testFetch(); }, []);
 
@@ -484,7 +484,7 @@ const App: React.FC = () => {
     }
 
     try {
-      const { error } = await supabase.from('vendas').update({ status: 'cancelado' }).eq('numero_pedido', sale.numeroPedido);
+      const { error } = await supabase.from('vendas').update({ status: 'cancelado' }).eq('numeropedido', sale.numeroPedido);
       if (error) throw error;
       
       // Atualizar estado local
@@ -512,8 +512,8 @@ const App: React.FC = () => {
     }
 
     try {
-      console.log("Chamando Supabase para deletar numero_pedido:", sale.numeroPedido);
-      const { error } = await supabase.from('vendas').delete().eq('numero_pedido', sale.numeroPedido);
+      console.log("Chamando Supabase para deletar numeropedido:", sale.numeroPedido);
+      const { error } = await supabase.from('vendas').delete().eq('numeropedido', sale.numeroPedido);
       if (error) throw error;
       
       console.log("Exclusão no Supabase bem-sucedida.");
@@ -1476,7 +1476,7 @@ const App: React.FC = () => {
                     <button 
                       onClick={async () => {
                         const handleFinalizeRetorno = async () => {
-                          const { error } = await supabase.from('vendas').update({ statusRetorno: 'finalizado' }).eq('numero_pedido', sale.numeroPedido);
+                          const { error } = await supabase.from('vendas').update({ statusRetorno: 'finalizado' }).eq('numeropedido', sale.numeroPedido);
                           if (error) console.error("Erro ao finalizar retorno:", error);
                         };
                         handleFinalizeRetorno();
