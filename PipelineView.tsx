@@ -1,7 +1,7 @@
 
 import React from 'react';
-import { PIPELINE_STAGES } from '../constants';
-import { Opportunity } from '../tipos';
+import { PIPELINE_STAGES } from './constants';
+import { Opportunity } from './tipos';
 import { MoreHorizontal, Plus, Gem, TrendingUp, DollarSign } from 'lucide-react';
 
 interface PipelineViewProps {

@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
+import { motion } from 'motion/react';
 import { Save, X, Terminal, CheckSquare, Square, Percent, User } from 'lucide-react';
 import { Sale, Customer, Targets } from '../tipos';
 
@@ -20,12 +21,12 @@ const SaleForm: React.FC<SaleFormProps> = ({ onCancel, onSubmit, customers, targ
   const [total, setTotal] = useState(0);
   const [errorMsg, setErrorMsg] = useState('');
 
-  const [extras, setExtras] = useState({
-    montagem: false,
-    lavagem: false,
-    almofada: false,
-    pes_guarda_roupa: false,
-    impermeabilizacao_bonus: false
+  const [extras, setExtras] = useState<Record<string, number>>({
+    montagem: 0,
+    lavagem: 0,
+    almofada: 0,
+    pes_guarda_roupa: 0,
+    impermeabilizacao_bonus: 0
   });
 
   const firstInputRef = useRef<HTMLInputElement>(null);
@@ -45,11 +46,11 @@ const SaleForm: React.FC<SaleFormProps> = ({ onCancel, onSubmit, customers, targ
 
   const calculateBonusFixo = () => {
     let bonusTotal = 0;
-    if (extras.montagem) bonusTotal += targets.serviceBonuses.montagem;
-    if (extras.lavagem) bonusTotal += targets.serviceBonuses.lavagem;
-    if (extras.almofada) bonusTotal += targets.serviceBonuses.almofada;
-    if (extras.pes_guarda_roupa) bonusTotal += targets.serviceBonuses.pes_guarda_roupa;
-    if (extras.impermeabilizacao_bonus) bonusTotal += targets.serviceBonuses.impermeabilizacao_bonus;
+    if (extras.montagem) bonusTotal += extras.montagem * targets.serviceBonuses.montagem;
+    if (extras.lavagem) bonusTotal += extras.lavagem * targets.serviceBonuses.lavagem;
+    if (extras.almofada) bonusTotal += extras.almofada * targets.serviceBonuses.almofada;
+    if (extras.pes_guarda_roupa) bonusTotal += extras.pes_guarda_roupa * targets.serviceBonuses.pes_guarda_roupa;
+    if (extras.impermeabilizacao_bonus) bonusTotal += extras.impermeabilizacao_bonus * targets.serviceBonuses.impermeabilizacao_bonus;
     if (isBonusPorPedidoAtivo) bonusTotal += valorBonusPorPedido;
     return bonusTotal;
   };
@@ -61,11 +62,11 @@ const SaleForm: React.FC<SaleFormProps> = ({ onCancel, onSubmit, customers, targ
 
   const getSelectedLabels = () => {
     const labels: string[] = [];
-    if (extras.montagem) labels.push("Montagem");
-    if (extras.lavagem) labels.push("Lavagem");
-    if (extras.almofada) labels.push("Almofada");
-    if (extras.pes_guarda_roupa) labels.push("Pés G-Roupa");
-    if (extras.impermeabilizacao_bonus) labels.push("Impermeab.");
+    if (extras.montagem > 0) labels.push(`${extras.montagem}x Montagem`);
+    if (extras.lavagem > 0) labels.push(`${extras.lavagem}x Lavagem`);
+    if (extras.almofada > 0) labels.push(`${extras.almofada}x Almofada`);
+    if (extras.pes_guarda_roupa > 0) labels.push(`${extras.pes_guarda_roupa}x Pés G-Roupa`);
+    if (extras.impermeabilizacao_bonus > 0) labels.push(`${extras.impermeabilizacao_bonus}x Impermeab.`);
     if (isBonusPorPedidoAtivo) labels.push("Bônus por Pedido");
     return labels;
   };
@@ -82,8 +83,11 @@ const SaleForm: React.FC<SaleFormProps> = ({ onCancel, onSubmit, customers, targ
     setter(isNaN(numericValue) ? 0 : numericValue);
   };
 
-  const toggleExtra = (key: keyof typeof extras) => {
-    setExtras(prev => ({ ...prev, [key]: !prev[key] }));
+  const updateExtraQuantity = (key: string, delta: number) => {
+    setExtras(prev => ({ 
+        ...prev, 
+        [key]: Math.max(0, (prev[key] || 0) + delta) 
+    }));
   };
 
   return (
@@ -98,9 +102,14 @@ const SaleForm: React.FC<SaleFormProps> = ({ onCancel, onSubmit, customers, targ
               </div>
               <h2 className="text-2xl md:text-3xl font-extrabold text-gray-800 tracking-tighter uppercase leading-none italic">Lançar Novo Pedido</h2>
             </div>
-            <button onClick={onCancel} className="bg-gray-100 text-gray-600 px-3 py-2 rounded-xl font-black text-[10px] uppercase border border-gray-200 hover:bg-gray-200 transition-all">
+            <motion.button 
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={onCancel} 
+              className="bg-gray-100 text-gray-600 px-3 py-2 rounded-xl font-black text-[10px] uppercase border border-gray-200 hover:bg-gray-200 transition-all"
+            >
               Voltar
-            </button>
+            </motion.button>
           </div>
 
           <form className="space-y-8" onSubmit={(e) => {
@@ -231,22 +240,22 @@ const SaleForm: React.FC<SaleFormProps> = ({ onCancel, onSubmit, customers, targ
                   { id: 'pes_guarda_roupa', label: 'Pés G-R', value: `R$${targets.serviceBonuses.pes_guarda_roupa}` },
                   { id: 'impermeabilizacao_bonus', label: 'Impermeab.', value: `R$${targets.serviceBonuses.impermeabilizacao_bonus}` }
                 ].map((item) => (
-                  <button
+                  <div
                     key={item.id}
-                    type="button"
-                    onClick={() => toggleExtra(item.id as keyof typeof extras)}
-                    className={`flex items-center justify-between p-4 rounded-xl border transition-all ${
-                      extras[item.id as keyof typeof extras]
+                    className={`flex flex-col p-4 rounded-xl border transition-all ${
+                      extras[item.id] > 0
                       ? 'bg-emerald-50 border-emerald-500/40 text-emerald-600'
-                      : 'bg-white border-gray-200 text-gray-400 hover:border-gray-300'
+                      : 'bg-white border-gray-200 text-gray-400'
                     }`}
                   >
-                    <div className="flex flex-col items-start text-left">
-                      <span className="text-[10px] font-bold uppercase tracking-tighter leading-none mb-1">{item.label}</span>
-                      <span className="text-[8px] opacity-60 font-black">{item.value}</span>
+                    <span className="text-[10px] font-bold uppercase tracking-tighter leading-none mb-2">{item.label}</span>
+                    <span className="text-[8px] opacity-60 font-black mb-3">{item.value}</span>
+                    <div className="flex items-center justify-between gap-2">
+                        <button type="button" onClick={() => updateExtraQuantity(item.id, -1)} className="bg-white/50 p-1 rounded hover:bg-white">-</button>
+                        <span className="font-black text-xs">{extras[item.id] || 0}</span>
+                        <button type="button" onClick={() => updateExtraQuantity(item.id, 1)} className="bg-white/50 p-1 rounded hover:bg-white">+</button>
                     </div>
-                    {extras[item.id as keyof typeof extras] ? <CheckSquare size={14} /> : <Square size={14} />}
-                  </button>
+                  </div>
                 ))}
               </div>
             </div>

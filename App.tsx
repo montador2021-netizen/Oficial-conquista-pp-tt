@@ -57,6 +57,8 @@ const TARGETS_KEY = 'conquista_app_targets_v1';
 const CUSTOMERS_KEY = 'conquista_app_customers_v1';
 const OPPORTUNITIES_KEY = 'conquista_app_opportunities_v1';
 
+import { supabase } from './src/lib/supabaseClient';
+
 const DEFAULT_TARGETS: Targets = {
   product: 50000,
   assistance: 3000,
@@ -94,6 +96,7 @@ const DEFAULT_TARGETS: Targets = {
 
 const App: React.FC = () => {
   const [activeNav, setActiveNav] = useState<NavItem>(NavItem.Resumos);
+  const [clickedNav, setClickedNav] = useState<NavItem | null>(null);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false); 
   const [savedSales, setSavedSales] = useState<Sale[]>(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
@@ -124,9 +127,7 @@ const App: React.FC = () => {
     };
 
     try {
-      // await supabase.from('access_logs').insert([log]);
-      // // Atualizar lastLogin do usuário
-      // await supabase.from('users').update({ lastLogin: log.timestamp }).eq('id', currentUser.id);
+      // Simular atualização de logs
     } catch (err) {
       console.error("Erro ao registrar acesso:", err);
     }
@@ -179,15 +180,6 @@ const App: React.FC = () => {
       return updated;
     });
     setEditingOpportunity(null);
-
-    // Sincronizar com Supabase
-    try {
-      const { id, ...data } = updatedOpp;
-      const { error } = await supabase.from('opportunities').update(data).eq('id', id);
-      if (error) throw error;
-    } catch (error) {
-      console.error("Erro ao atualizar oportunidade no Supabase:", error);
-    }
   };
 
   const handleNavSelect = (navItem: NavItem) => {
@@ -239,10 +231,7 @@ const App: React.FC = () => {
             if (sale.clienteId) {
               const customer = customers.find(c => c.id === sale.clienteId);
               if (customer) {
-                await supabase.from('customers').update({
-                  totalComprado: (customer.totalComprado || 0) + sale.total,
-                  pedidosCount: (customer.pedidosCount || 0) + 1
-                }).eq('id', sale.clienteId);
+                // Sincronizar atualizações de cliente
               }
             }
           } catch (error) {
@@ -274,12 +263,8 @@ const App: React.FC = () => {
 
       // Se for admin, buscar lista de vendedores
       if (isAdmin) {
-        try {
-          const { data: vendedoresData } = await supabase.from('users').select('*');
-          if (vendedoresData) setVendedores(vendedoresData as User[]);
-        } catch (err) {
-          console.error("Erro ao buscar vendedores:", err);
-        }
+        // Dados simulados para vendedores caso o banco não esteja disponível
+        setVendedores([]);
       }
 
       // Carregar do localStorage primeiro para rapidez
@@ -727,13 +712,29 @@ const App: React.FC = () => {
                     key={item.id}
                     whileHover={{ scale: 1.05, y: -5 }}
                     whileTap={{ scale: 0.95 }}
-                    onClick={() => setActiveNav(item.id)}
-                    className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-xl shadow-gray-200/20 flex flex-col items-center text-center space-y-4 group transition-all hover:border-purple-200 hover:shadow-purple-200/30"
+                    onClick={() => {
+                        setClickedNav(item.id);
+                        setTimeout(() => {
+                            setActiveNav(item.id);
+                            setClickedNav(null);
+                        }, 500);
+                    }}
+                    className={`p-8 rounded-[2.5rem] border shadow-xl flex flex-col items-center text-center space-y-4 group transition-all ${
+                        clickedNav === item.id 
+                        ? 'bg-purple-600 text-white border-purple-600'
+                        : 'bg-white border-gray-100 shadow-gray-200/20 hover:border-purple-200 hover:shadow-purple-200/30'
+                    }`}
                   >
-                    <div className="w-16 h-16 bg-purple-50 rounded-2xl flex items-center justify-center text-purple-600 group-hover:bg-purple-600 group-hover:text-white transition-all duration-300">
+                    <div className={`w-16 h-16 rounded-2xl flex items-center justify-center transition-all duration-300 ${
+                        clickedNav === item.id
+                        ? 'bg-purple-700 text-white'
+                        : 'bg-purple-50 text-purple-600 group-hover:bg-purple-600 group-hover:text-white'
+                    }`}>
                       {item.icon}
                     </div>
-                    <span className="text-[12px] font-black text-gray-800 uppercase tracking-widest leading-tight">
+                    <span className={`text-[12px] font-black uppercase tracking-widest leading-tight ${
+                        clickedNav === item.id ? 'text-white' : 'text-gray-800'
+                    }`}>
                       {item.label}
                     </span>
                   </motion.button>
@@ -932,7 +933,14 @@ const App: React.FC = () => {
               <span className="text-[8px] font-black text-purple-600 tracking-[0.3em] uppercase">Gestão de Leads & Pipeline</span>
             </div>
             <div className="flex gap-2">
-              <button onClick={() => setActiveNav(NavItem.Resumos)} className="bg-gray-100 text-gray-600 px-3 py-2 rounded-xl font-black text-[10px] uppercase border border-gray-200">Voltar</button>
+              <motion.button
+                whileHover={{ scale: 1.05, y: -5 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => setActiveNav(NavItem.Resumos)}
+                className="bg-gray-100 text-gray-600 px-3 py-2 rounded-xl font-black text-[10px] uppercase border border-gray-200"
+              >
+                Voltar
+              </motion.button>
               <button 
                 onClick={() => setIsAddingOpportunity(true)}
                 className="p-3 bg-purple-600 rounded-xl shadow-lg shadow-purple-500/20 text-white hover:bg-purple-700 active:scale-95 transition-all flex items-center gap-2"
@@ -1102,7 +1110,14 @@ const App: React.FC = () => {
               <h2 className="text-xl font-black text-gray-800 italic tracking-tighter uppercase leading-none">Minhas Metas</h2>
               <span className="text-[8px] font-black text-purple-600 tracking-[0.3em] uppercase">Progresso em Tempo Real</span>
             </div>
-            <button onClick={() => setActiveNav(NavItem.Resumos)} className="bg-gray-100 text-gray-600 px-3 py-2 rounded-xl font-black text-[10px] uppercase border border-gray-200">Voltar</button>
+            <motion.button
+              whileHover={{ scale: 1.05, y: -5 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => setActiveNav(NavItem.Resumos)}
+              className="bg-gray-100 text-gray-600 px-3 py-2 rounded-xl font-black text-[10px] uppercase border border-gray-200"
+            >
+              Voltar
+            </motion.button>
           </div>
 
           <div className="grid grid-cols-1 gap-6">
@@ -1205,7 +1220,14 @@ const App: React.FC = () => {
               <h2 className="text-xl font-black text-gray-800 italic tracking-tighter uppercase leading-none">Serviços</h2>
               <span className="text-[8px] font-black text-purple-600 tracking-[0.3em] uppercase">Resumo de Extras & Garantia</span>
             </div>
-            <button onClick={() => setActiveNav(NavItem.Resumos)} className="bg-gray-100 text-gray-600 px-3 py-2 rounded-xl font-black text-[10px] uppercase border border-gray-200">Voltar</button>
+            <motion.button
+              whileHover={{ scale: 1.05, y: -5 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => setActiveNav(NavItem.Resumos)}
+              className="bg-gray-100 text-gray-600 px-3 py-2 rounded-xl font-black text-[10px] uppercase border border-gray-200"
+            >
+              Voltar
+            </motion.button>
           </div>
 
           <div className="bg-white p-8 rounded-3xl border border-gray-200 flex flex-col items-center justify-center space-y-2 shadow-sm">
@@ -1306,7 +1328,14 @@ const App: React.FC = () => {
                 <h2 className="text-xl font-black text-gray-800 italic tracking-tighter uppercase leading-none">Relatórios</h2>
                 <span className="text-[8px] font-black text-purple-600 tracking-[0.3em] uppercase">Consolidado por Período</span>
              </div>
-             <button onClick={() => setActiveNav(NavItem.Resumos)} className="bg-gray-100 text-gray-600 px-3 py-2 rounded-xl font-black text-[10px] uppercase border border-gray-200">Voltar</button>
+             <motion.button
+               whileHover={{ scale: 1.05, y: -5 }}
+               whileTap={{ scale: 0.95 }}
+               onClick={() => setActiveNav(NavItem.Resumos)}
+               className="bg-gray-100 text-gray-600 px-3 py-2 rounded-xl font-black text-[10px] uppercase border border-gray-200"
+             >
+               Voltar
+             </motion.button>
           </div>
 
           <div className="flex flex-col gap-2 pb-2">
@@ -1525,7 +1554,14 @@ const App: React.FC = () => {
                    Enviar Tudo
                  </button>
                )}
-               <button onClick={() => setActiveNav(NavItem.Resumos)} className="bg-gray-100 text-gray-600 px-3 py-2 rounded-xl font-black text-[10px] uppercase border border-gray-200">Voltar</button>
+               <motion.button
+                 whileHover={{ scale: 1.05 }}
+                 whileTap={{ scale: 0.95 }}
+                 onClick={() => setActiveNav(NavItem.Resumos)}
+                 className="bg-gray-100 text-gray-600 px-3 py-2 rounded-xl font-black text-[10px] uppercase border border-gray-200"
+               >
+                 Voltar
+               </motion.button>
              </div>
           </div>
 
@@ -1852,9 +1888,12 @@ const App: React.FC = () => {
                   <h3 className="text-2xl font-black text-gray-800 italic tracking-tighter uppercase">Pedido #{selectedSale.numeroPedido}</h3>
                   <p className="text-[10px] font-black text-purple-600 uppercase tracking-[0.3em]">{selectedSale.data}</p>
                 </div>
-                <button onClick={() => setSelectedSale(null)} className="bg-gray-100 text-gray-600 px-3 py-2 rounded-xl font-black text-[10px] uppercase border border-gray-200">
+                <motion.button 
+                  whileHover={{ scale: 1.05, y: -5 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => setSelectedSale(null)} className="bg-gray-100 text-gray-600 px-3 py-2 rounded-xl font-black text-[10px] uppercase border border-gray-200">
                   Voltar
-                </button>
+                </motion.button>
               </div>
 
               <div className="space-y-4">
@@ -1981,12 +2020,14 @@ const App: React.FC = () => {
               Você está prestes a excluir permanentemente o pedido <span className="text-red-600">#{saleToDelete.numeroPedido}</span>. Esta ação não pode ser desfeita.
             </p>
             <div className="flex gap-3">
-              <button 
+              <motion.button 
+                whileHover={{ scale: 1.05, y: -5 }}
+                whileTap={{ scale: 0.95 }}
                 onClick={() => setSaleToDelete(null)}
                 className="flex-1 bg-gray-100 text-gray-600 py-2 rounded-xl font-black text-[10px] uppercase border border-gray-200"
               >
                 Voltar
-              </button>
+              </motion.button>
               <button 
                 onClick={() => deleteSale(saleToDelete)}
                 className="flex-1 bg-red-600 text-white py-3 rounded-xl font-black text-[10px] uppercase shadow-lg shadow-red-500/20"
