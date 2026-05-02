@@ -275,7 +275,7 @@ const App: React.FC = () => {
       
       console.log("Buscando dados no Supabase...");
       try {
-        let query = supabase.from('sales').select('*');
+        let query = supabase.from('vendas').select('*');
         
         // Se não for admin, filtra apenas as próprias vendas
         if (!isAdmin) {
@@ -458,7 +458,7 @@ const App: React.FC = () => {
     }
 
     try {
-      const { error } = await supabase.from('sales').update({ status: 'cancelado' }).eq('id', sale.id);
+      const { error } = await supabase.from('vendas').update({ status: 'cancelado' }).eq('id', sale.id);
       if (error) throw error;
       // Atualizar estado local
       setSavedSales(prev => prev.map(s => s.id === sale.id ? { ...s, status: 'cancelado' } : s));
@@ -524,7 +524,7 @@ const App: React.FC = () => {
     // 3. Tentar sincronizar com Supabase
     try {
       console.log("Tentando sincronizar com Supabase...");
-      const { error } = await supabase.from('sales').insert([saleObj]);
+      const { error } = await supabase.from('vendas').insert([saleObj]);
       if (error) throw error;
       console.log("Sincronizado com sucesso!");
     } catch (error) {
@@ -1477,7 +1477,7 @@ const App: React.FC = () => {
                     <button 
                       onClick={async () => {
                         const handleFinalizeRetorno = async () => {
-                          const { error } = await supabase.from('sales').update({ statusRetorno: 'finalizado' }).eq('id', sale.id);
+                          const { error } = await supabase.from('vendas').update({ statusRetorno: 'finalizado' }).eq('id', sale.id);
                           if (error) console.error("Erro ao finalizar retorno:", error);
                         };
                         handleFinalizeRetorno();
