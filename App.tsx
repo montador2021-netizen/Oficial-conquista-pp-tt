@@ -11,7 +11,6 @@ import Login from './components/Login';
 import { NavItem, Sale, Targets, WeeklyPerformance, DashboardStats, Customer, Opportunity } from './tipos';
 import { PIPELINE_STAGES, MOCK_OPPORTUNITIES, NAVIGATION_ITEMS } from './constants';
 import { motion, AnimatePresence } from 'motion/react';
-import { supabase } from './src/supabase';
 import { 
   Plus, 
   Wrench, 
@@ -113,7 +112,8 @@ const App: React.FC = () => {
   const [targets, setTargets] = useState<Targets>(DEFAULT_TARGETS);
 
   const logAccess = async (currentUser: User) => {
-    if (!supabase || currentUser.id === 'anon-default') return;
+    // if (!supabase || currentUser.id === 'anon-default') return;
+    if (currentUser.id === 'anon-default') return;
     
     const log: Omit<AccessLog, 'id'> = {
       userId: currentUser.id,
@@ -124,9 +124,9 @@ const App: React.FC = () => {
     };
 
     try {
-      await supabase.from('access_logs').insert([log]);
-      // Atualizar lastLogin do usuário
-      await supabase.from('users').update({ lastLogin: log.timestamp }).eq('id', currentUser.id);
+      // await supabase.from('access_logs').insert([log]);
+      // // Atualizar lastLogin do usuário
+      // await supabase.from('users').update({ lastLogin: log.timestamp }).eq('id', currentUser.id);
     } catch (err) {
       console.error("Erro ao registrar acesso:", err);
     }
@@ -139,12 +139,6 @@ const App: React.FC = () => {
   const [viewingVendedorId, setViewingVendedorId] = useState<string | null>(null);
   const [vendedores, setVendedores] = useState<User[]>([]);
   const isAdmin = user?.role === 'admin';
-
-  const testFetch = async () => {
-    const { data, error } = await supabase.from('vendas').select('numeropedido');
-    console.log("Teste de busca por numeropedido:", data, "Erro:", error);
-  };
-  useEffect(() => { testFetch(); }, []);
 
   const handleLogin = (loggedUser: User) => {
     setUser(loggedUser);
@@ -164,25 +158,16 @@ const App: React.FC = () => {
         tags: []
       };
 
-      // Atualizar estado local imediatamente
+      // Atualizar estado local
       setOpportunities(prev => {
         const updated = [newOpp, ...(Array.isArray(prev) ? prev : [])];
         localStorage.setItem(OPPORTUNITIES_KEY, JSON.stringify(updated));
         return updated;
       });
       setIsAddingOpportunity(false);
-
-      // Sincronizar com Supabase
-      console.log("Sincronizando oportunidade com Supabase...");
-      const { error } = await supabase.from('opportunities').insert([newOpp]);
-      if (error) {
-        console.error("Erro detalhado do Supabase ao inserir oportunidade:", error);
-        throw error;
-      }
-      console.log("Oportunidade sincronizada com sucesso!");
     } catch (error) {
       console.error("Erro geral ao adicionar oportunidade:", error);
-      alert("Erro ao salvar card. Verifique sua conexão.");
+      alert("Erro ao salvar card.");
     }
   };
 
@@ -244,8 +229,12 @@ const App: React.FC = () => {
       if (pending.length > 0) {
         for (const sale of pending) {
           try {
-            const { error } = await supabase.from('vendas').insert([sale]);
-            if (error) throw error;
+      // Refactoring Supabase call to localStorage
+      {
+        const newSales = [...savedSales, sale];
+        setSavedSales(newSales);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(newSales));
+      }
             // Atualizar estatísticas do cliente se vinculado
             if (sale.clienteId) {
               const customer = customers.find(c => c.id === sale.clienteId);
@@ -301,7 +290,7 @@ const App: React.FC = () => {
       
       console.log("Buscando dados no Supabase...");
       try {
-        let query = supabase.from('vendas').select('*');
+        let query = supabase.from('sales').select('*');
         
         // Se não for admin, filtra apenas as próprias vendas
         if (!isAdmin) {
@@ -475,7 +464,7 @@ const App: React.FC = () => {
 
   const cancelSale = async (sale: Sale) => {
     // Se for um pedido pendente (sem ID), remove do localStorage
-    if (!sale.numeroPedido) {
+    if (!sale.id) {
       const pending = JSON.parse(localStorage.getItem('pending_sales') || '[]');
       const updatedPending = pending.filter((s: Sale) => s.numeroPedido !== sale.numeroPedido);
       localStorage.setItem('pending_sales', JSON.stringify(updatedPending));
@@ -484,25 +473,20 @@ const App: React.FC = () => {
     }
 
     try {
-      const { error } = await supabase.from('vendas').update({ status: 'cancelado' }).eq('numeropedido', sale.numeroPedido);
+      const { error } = await supabase.from('sales').update({ status: 'cancelado' }).eq('id', sale.id);
       if (error) throw error;
-      
       // Atualizar estado local
-      setSavedSales(prev => {
-        const updated = prev.map(s => s.numeroPedido === sale.numeroPedido ? { ...s, status: 'cancelado' } : s);
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-        return updated;
-      });
+      setSavedSales(prev => prev.map(s => s.id === sale.id ? { ...s, status: 'cancelado' } : s));
+      // Atualizar localStorage
+      const updatedSales = savedSales.map(s => s.id === sale.id ? { ...s, status: 'cancelado' } : s);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedSales));
     } catch (error) {
       console.error("Erro ao cancelar venda:", error);
     }
   };
 
   const deleteSale = async (sale: Sale) => {
-    console.log("Iniciando exclusão da venda:", sale);
-    
-    if (!sale.numeroPedido) {
-      console.log("Pedido sem ID, removendo pendente...");
+    if (!sale.id) {
       const pending = JSON.parse(localStorage.getItem('pending_sales') || '[]');
       const updatedPending = pending.filter((s: Sale) => s.numeroPedido !== sale.numeroPedido);
       localStorage.setItem('pending_sales', JSON.stringify(updatedPending));
@@ -511,23 +495,11 @@ const App: React.FC = () => {
       return;
     }
 
-    try {
-      console.log("Chamando Supabase para deletar numeropedido:", sale.numeroPedido);
-      const { error } = await supabase.from('vendas').delete().eq('numeropedido', sale.numeroPedido);
-      if (error) throw error;
-      
-      console.log("Exclusão no Supabase bem-sucedida.");
-      setSavedSales(prev => {
-        const updated = prev.filter(s => s.numeroPedido !== sale.numeroPedido);
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-        return updated;
-      });
-      setSaleToDelete(null);
-      console.log("Estado atualizado e modal fechado.");
-    } catch (error: any) {
-      console.error("Erro ao excluir venda:", error);
-      alert("Erro ao excluir pedido: " + (error.message || String(error)));
-    }
+    // Excluir utilizando localStorage
+    const updatedSales = savedSales.filter(s => s.id !== sale.id);
+    setSavedSales(updatedSales);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedSales));
+    setSaleToDelete(null);
   };
 
   const handleLogout = () => {
@@ -567,7 +539,7 @@ const App: React.FC = () => {
     // 3. Tentar sincronizar com Supabase
     try {
       console.log("Tentando sincronizar com Supabase...");
-      const { error } = await supabase.from('vendas').insert([saleObj]);
+      const { error } = await supabase.from('sales').insert([saleObj]);
       if (error) throw error;
       console.log("Sincronizado com sucesso!");
     } catch (error) {
@@ -1476,7 +1448,7 @@ const App: React.FC = () => {
                     <button 
                       onClick={async () => {
                         const handleFinalizeRetorno = async () => {
-                          const { error } = await supabase.from('vendas').update({ statusRetorno: 'finalizado' }).eq('numeropedido', sale.numeroPedido);
+                          const { error } = await supabase.from('sales').update({ statusRetorno: 'finalizado' }).eq('id', sale.id);
                           if (error) console.error("Erro ao finalizar retorno:", error);
                         };
                         handleFinalizeRetorno();

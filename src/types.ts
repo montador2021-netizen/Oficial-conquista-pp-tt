@@ -7,7 +7,6 @@ export interface User {
   role: 'vendedor' | 'admin';
   photoUrl?: string;
   lastLogin?: string;
-  active?: boolean;
 }
 
 export interface AccessLog {

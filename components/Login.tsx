@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { supabase } from '../src/supabase';
 import { User } from '../src/types';
 import { motion } from 'motion/react';
 import { ShieldCheck, User as UserIcon, Lock, ArrowRight } from 'lucide-react';
@@ -24,10 +23,6 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
     setLoading(true);
     setError(null);
 
-    const timeoutPromise = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error('Tempo limite de conexão esgotado.')), 10000)
-    );
-
     try {
       const names = nomeCompleto.trim().split(/\s+/).filter(Boolean);
       if (names.length < 1) {
@@ -38,37 +33,22 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
       
       const firstName = names[0];
       const lastName = names.length > 1 ? names.slice(1).join(' ') : '';
-
-      const fetchPromise = supabase
-        .from('users')
-        .select('*')
-        .ilike('firstName', firstName.trim())
-        .ilike('lastName', lastName.trim())
-        .maybeSingle();
-
-      const { data: existingUser, error: fetchError } = await Promise.race([fetchPromise, timeoutPromise]) as any;
-
-      if (fetchError && fetchError.code !== 'PGRST116') { 
-        if (fetchError.code === '42P01') {
-          throw new Error('A tabela de usuários não existe.');
-        }
-        throw fetchError;
-      }
+      
+      const users: User[] = JSON.parse(localStorage.getItem('conquista_app_users') || '[]');
+      const existingUser = users.find(u => 
+        u.firstName.toLowerCase() === firstName.toLowerCase() && 
+        u.lastName.toLowerCase() === lastName.toLowerCase()
+      );
 
       if (existingUser) {
-        if (existingUser.active === false) {
-           setError('Usuário bloqueado pelo administrador.');
-        } else if (existingUser.password === senha) {
-          onLogin(existingUser as User);
+        if (existingUser.password === senha) {
+          onLogin(existingUser);
         } else {
           setError('Senha incorreta.');
         }
       } else {
-        // Auto-create user if not exists
-        const { count } = await supabase.from('users').select('*', { count: 'exact', head: true });
-        const nextId = (count || 0) + 1;
-        const year = new Date().getFullYear();
-        const customId = `VC-${year}-${String(nextId).padStart(3, '0')}`;
+        // Auto-create user
+        const customId = `VC-${new Date().getFullYear()}-${Date.now().toString().slice(-3)}`;
 
         const newUser: User = {
           id: customId,
@@ -78,18 +58,16 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
           password: senha,
           role: (firstName.toLowerCase() === 'valmir' && lastName.toLowerCase() === 'melo') ? 'admin' : 'vendedor',
           lastLogin: new Date().toISOString(),
-          photoUrl: "https://picsum.photos/seed/" + customId + "/100/100",
-          active: true
+          photoUrl: "https://picsum.photos/seed/" + customId + "/100/100"
         };
 
-        const { error: insertError } = await supabase.from('users').insert([newUser]);
-        if (insertError) throw insertError;
-
+        users.push(newUser);
+        localStorage.setItem('conquista_app_users', JSON.stringify(users));
         onLogin(newUser);
       }
     } catch (err: any) {
-      console.error('Erro detalhado no login:', err);
-      setError(err.message || 'Erro de conexão.');
+      console.error('Erro de login:', err);
+      setError('Erro no login.');
     } finally {
       setLoading(false);
     }
