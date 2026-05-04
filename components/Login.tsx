@@ -1,73 +1,40 @@
 import React, { useState } from 'react';
-import { User } from '../src/types';
 import { motion } from 'motion/react';
-import { ShieldCheck, User as UserIcon, Lock, ArrowRight } from 'lucide-react';
+import { ShieldCheck, ArrowRight } from 'lucide-react';
+import { auth } from '../src/services/firebaseConfig';
+import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 
 interface LoginProps {
-  onLogin: (user: User) => void;
+  onLogin: (user: any) => void;
 }
 
 const Login: React.FC<LoginProps> = ({ onLogin }) => {
-  const [nomeCompleto, setNomeCompleto] = useState('');
-  const [senha, setSenha] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!nomeCompleto || !senha) {
-      setError('Por favor, preencha todos os campos.');
-      return;
-    }
-
+  const handleGoogleLogin = async () => {
     setLoading(true);
     setError(null);
-
     try {
-      const names = nomeCompleto.trim().split(/\s+/).filter(Boolean);
-      if (names.length < 1) {
-        setError('Por favor, digite seu nome.');
-        setLoading(false);
-        return;
-      }
+      const provider = new GoogleAuthProvider();
+      const result = await signInWithPopup(auth, provider);
+      const user = result.user;
       
-      const firstName = names[0];
-      const lastName = names.length > 1 ? names.slice(1).join(' ') : '';
+      // Mapear usuário do Firebase para o formato esperado pelo App
+      const appUser = {
+        id: user.uid,
+        firstName: user.displayName?.split(' ')[0] || 'Usuário',
+        lastName: user.displayName?.split(' ').slice(1).join(' ') || '',
+        store: 'Loja Padrão',
+        role: 'vendedor',
+        lastLogin: new Date().toISOString(),
+        photoUrl: user.photoURL
+      };
       
-      const users: User[] = JSON.parse(localStorage.getItem('conquista_app_users') || '[]');
-      const existingUser = users.find(u => 
-        u.firstName.toLowerCase() === firstName.toLowerCase() && 
-        u.lastName.toLowerCase() === lastName.toLowerCase()
-      );
-
-      if (existingUser) {
-        if (existingUser.password === senha) {
-          onLogin(existingUser);
-        } else {
-          setError('Senha incorreta.');
-        }
-      } else {
-        // Auto-create user
-        const customId = `VC-${new Date().getFullYear()}-${Date.now().toString().slice(-3)}`;
-
-        const newUser: User = {
-          id: customId,
-          firstName,
-          lastName,
-          store: 'Loja 1',
-          password: senha,
-          role: (firstName.toLowerCase() === 'valmir' && lastName.toLowerCase() === 'melo') ? 'admin' : 'vendedor',
-          lastLogin: new Date().toISOString(),
-          photoUrl: "https://picsum.photos/seed/" + customId + "/100/100"
-        };
-
-        users.push(newUser);
-        localStorage.setItem('conquista_app_users', JSON.stringify(users));
-        onLogin(newUser);
-      }
+      onLogin(appUser);
     } catch (err: any) {
       console.error('Erro de login:', err);
-      setError('Erro no login.');
+      setError('Erro ao autenticar com Google: ' + err.message);
     } finally {
       setLoading(false);
     }
@@ -92,72 +59,14 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
           </div>
         </div>
 
-        <form onSubmit={handleLogin} className="space-y-6">
-          <div className="space-y-4">
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400">
-                <UserIcon size={18} />
-              </div>
-              <input
-                type="text"
-                placeholder="Nome Completo (Conforme Cadastro)"
-                value={nomeCompleto}
-                onChange={(e) => setNomeCompleto(e.target.value)}
-                className="w-full bg-gray-50 border border-gray-100 pl-12 pr-4 py-4 rounded-2xl text-sm font-bold text-gray-800 outline-none focus:border-purple-500 focus:ring-4 focus:ring-purple-500/5 transition-all"
-              />
-            </div>
-
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400">
-                <Lock size={18} />
-              </div>
-              <input
-                type="password"
-                placeholder="Sua Senha"
-                value={senha}
-                onChange={(e) => setSenha(e.target.value)}
-                className="w-full bg-gray-50 border border-gray-100 pl-12 pr-4 py-4 rounded-2xl text-sm font-bold text-gray-800 outline-none focus:border-purple-500 focus:ring-4 focus:ring-purple-500/5 transition-all"
-              />
-              <div className="flex justify-end mt-2">
-                <button 
-                  type="button"
-                  onClick={() => setError("Entre em contato com o administrador para redefinir sua senha.")}
-                  className="text-[10px] text-gray-400 hover:text-purple-600 font-bold uppercase tracking-widest underline"
-                >
-                  Esqueci minha senha
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {error && (
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="bg-red-50 p-4 rounded-2xl border border-red-100"
-            >
-              <p className="text-red-500 text-[10px] font-black uppercase text-center tracking-widest leading-relaxed">
-                {error}
-              </p>
-            </motion.div>
-          )}
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-purple-600 text-white py-4 rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-xl shadow-purple-500/20 active:scale-95 transition-all flex items-center justify-center gap-3 disabled:opacity-50"
-          >
-            {loading ? 'Verificando...' : (
-              <>
-                Entrar no Sistema
-                <ArrowRight size={18} />
-              </>
-            )}
-          </button>
-        </form>
+        <button
+          onClick={handleGoogleLogin}
+          disabled={loading}
+          className="w-full bg-white border border-gray-200 text-gray-800 py-4 rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-lg shadow-gray-200/20 active:scale-95 transition-all flex items-center justify-center gap-3 disabled:opacity-50"
+        >
+          {loading ? 'Autenticando...' : 'Entrar com Google'}
+        </button>
       </motion.div>
-      
-      <p className="mt-8 text-[10px] font-black text-gray-400 uppercase tracking-[0.5em]">Conquista App Gestão de Alta Performance</p>
     </div>
   );
 };

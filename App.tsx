@@ -60,6 +60,7 @@ const OPPORTUNITIES_KEY = 'conquista_app_opportunities_v1';
 import { supabase } from './src/lib/supabaseClient';
 import { db, auth } from './src/services/firebaseConfig';
 import { collection, addDoc, doc, setDoc, updateDoc } from 'firebase/firestore';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
 
 const DEFAULT_TARGETS: Targets = {
   product: 50000,
@@ -197,29 +198,26 @@ const App: React.FC = () => {
   };
 
   useEffect(() => {
-    // Check localStorage first
-    const storedUser = localStorage.getItem('currentUser');
-    if (storedUser) {
-      const parsedUser = JSON.parse(storedUser);
-      setUser(parsedUser);
-      logAccess(parsedUser);
-    } else {
-      // Automatic default user creation
-      const defaultUser: User = {
-        id: 'user-default',
-        firstName: 'Vendedor',
-        lastName: 'Local',
-        store: 'Loja Padrão',
-        password: '',
-        role: 'vendedor',
-        lastLogin: new Date().toISOString(),
-        photoUrl: "https://picsum.photos/seed/default/100/100"
-      };
-      setUser(defaultUser);
-      localStorage.setItem('currentUser', JSON.stringify(defaultUser));
-      logAccess(defaultUser);
-    }
-    setLoading(false);
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        const appUser = {
+          id: user.uid,
+          firstName: user.displayName?.split(' ')[0] || 'Usuário',
+          lastName: user.displayName?.split(' ').slice(1).join(' ') || '',
+          store: 'Loja Padrão',
+          role: 'vendedor',
+          lastLogin: new Date().toISOString(),
+          photoUrl: user.photoURL
+        };
+        setUser(appUser);
+        logAccess(appUser);
+      } else {
+        setUser(null);
+      }
+      setLoading(false);
+    });
+
+    return unsubscribe;
   }, []);
   
   // Monitorar conexão e PWA
@@ -507,9 +505,8 @@ const App: React.FC = () => {
     setSaleToDelete(null);
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem('currentUser');
-    setUser(null);
+  const handleLogout = async () => {
+    await signOut(auth);
     window.location.reload();
   };
 
@@ -1951,7 +1948,7 @@ const App: React.FC = () => {
         </header>
 
         <main className="flex-1 overflow-y-auto p-8">
-          {renderContent()}
+          {user ? renderContent() : <Login onLogin={() => {}} />}
         </main>
 
         {/* BOTÃO FLUTUANTE DIRETO */}
