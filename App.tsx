@@ -59,6 +59,7 @@ const OPPORTUNITIES_KEY = 'conquista_app_opportunities_v1';
 
 import { supabase } from './src/lib/supabaseClient';
 import { db, auth } from './src/services/firebaseConfig';
+import { collection, addDoc, doc, setDoc, updateDoc } from 'firebase/firestore';
 
 const DEFAULT_TARGETS: Targets = {
   product: 50000,
@@ -159,6 +160,14 @@ const App: React.FC = () => {
         user: { name: user?.firstName || 'Admin', avatar: user?.photoUrl || 'https://picsum.photos/seed/u1/40/40' },
         tags: []
       };
+
+      // Salvar no Firestore
+      try {
+        await addDoc(collection(db, 'opportunities'), newOpp);
+        console.log("Oportunidade salva no Firestore");
+      } catch (fbError) {
+        console.error("Erro ao salvar no Firestore:", fbError);
+      }
 
       // Atualizar estado local
       setOpportunities(prev => {
@@ -532,12 +541,21 @@ const App: React.FC = () => {
     // 2. Redirecionar imediatamente
     setActiveNav(NavItem.ResumoPedido);
 
-    // 3. Tentar sincronizar com Supabase
+    // 3. Tentar sincronizar com Supabase e Firebase
     try {
-      console.log("Tentando sincronizar com Supabase...");
+      console.log("Tentando sincronizar com Supabase e Firebase...");
+      
+      // Firestore
+      try {
+        await addDoc(collection(db, 'vendas'), saleObj);
+        console.log("Venda salva no Firestore com sucesso!");
+      } catch (fbError) {
+        console.error("Erro ao salvar no Firestore:", fbError);
+      }
+
       const { error } = await supabase.from('vendas').insert([saleObj]);
       if (error) throw error;
-      console.log("Sincronizado com sucesso!");
+      console.log("Sincronizado com sucesso (Supabase)!");
     } catch (error) {
       console.warn("Erro ao sincronizar, salvando para depois:", error);
       // Salva na fila de pendentes para tentar novamente quando voltar online
