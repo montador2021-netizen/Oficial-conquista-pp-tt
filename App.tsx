@@ -2117,7 +2117,10 @@ const App: React.FC = () => {
             </div>
           </motion.div>
         </div>
-      )}    </div>
+      )}
+      </div>
+      </div>
+      </div>
     </div>
   );
 };
