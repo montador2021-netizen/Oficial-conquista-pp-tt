@@ -250,10 +250,10 @@ const SaleForm: React.FC<SaleFormProps> = ({ onCancel, onSubmit, customers, targ
                   >
                     <span className="text-[10px] font-bold uppercase tracking-tighter leading-none mb-2">{item.label}</span>
                     <span className="text-[8px] opacity-60 font-black mb-3">{item.value}</span>
-                    <div className="flex items-center justify-between gap-2">
-                        <button type="button" onClick={() => updateExtraQuantity(item.id, -1)} className="bg-white/50 p-1 rounded hover:bg-white">-</button>
-                        <span className="font-black text-xs">{extras[item.id] || 0}</span>
-                        <button type="button" onClick={() => updateExtraQuantity(item.id, 1)} className="bg-white/50 p-1 rounded hover:bg-white">+</button>
+                    <div className="flex items-center justify-between gap-2 p-1 bg-white rounded-full border border-gray-100 shadow-inner">
+                        <button type="button" onClick={() => updateExtraQuantity(item.id, -1)} className="w-9 h-9 flex items-center justify-center rounded-full bg-white hover:bg-gray-50 text-gray-500 font-black border border-gray-200 transition-all active:scale-90">-</button>
+                        <span className="font-black text-sm min-w-[25px] text-center text-gray-900">{extras[item.id] || 0}</span>
+                        <button type="button" onClick={() => updateExtraQuantity(item.id, 1)} className="w-9 h-9 flex items-center justify-center rounded-full bg-emerald-500 hover:bg-emerald-600 text-white font-black shadow-lg shadow-emerald-500/20 transition-all active:scale-90">+</button>
                     </div>
                   </div>
                 ))}

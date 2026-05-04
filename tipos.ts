@@ -87,12 +87,15 @@ export interface DashboardStats {
   taxaGarantia?: number;
   bateuOsTres?: boolean;
   comissaoProdutos: number;
+  comissaoProdutosTotal: number; // Nova soma
   comissaoAssistencia: number;
   bonusGarantia: number;
+  comissaoGarantiasTotal: number; // Nova soma
   bonusServicos: number;
   bonusAcelerador: number;
   bonusPorPedidoTotal: number;
   premiacaoExtraTotal: number;
+  outrosTotal: number; // Nova soma
   ganhosTotais: number;
   faturamentoGeral: number;
 }

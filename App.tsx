@@ -307,6 +307,14 @@ const App: React.FC = () => {
           targetsData = globalTargets;
         }
 
+        if (!targetsData) {
+          const local = localStorage.getItem(TARGETS_KEY);
+          if (local) {
+             targetsData = JSON.parse(local);
+             console.log("Targets loaded from localStorage");
+          }
+        }
+
         if (targetsData) {
           const mergedTargets: Targets = {
             ...DEFAULT_TARGETS,
@@ -405,6 +413,7 @@ const App: React.FC = () => {
   }, [opportunities]);
 
   const saveTargets = async (newTargets: Targets) => {
+    console.log("App: Tentando salvar targets:", newTargets);
     try {
       console.log("Saving targets:", newTargets);
       const targetId = (user && user.id !== 'user-default') ? `targets_${user.id}` : 'targets';
@@ -412,10 +421,11 @@ const App: React.FC = () => {
       console.log("Upserting with targetId:", targetId);
       
       // Salva no Supabase (Online)
+      // Tenta ser mais específico com o objeto a ser salvo se necessário, mas upsert aceita o objeto completo
       const { data, error } = await supabase.from('settings').upsert({ id: targetId, ...newTargets });
       if (error) {
         console.error("Supabase error detail:", error);
-        throw error;
+        throw new Error(`Supabase error: ${error.message}${error.hint ? ' - ' + error.hint : ''}`);
       }
       
       console.log("Upsert success. Returned data:", data);
@@ -575,11 +585,15 @@ const App: React.FC = () => {
     const serviceCounts = { 'Montagem': 0, 'Lavagem': 0, 'Almofada': 0, 'Pés G-Roupa': 0, 'Impermeab.': 0 };
     activeSales.forEach(s => {
       if (s.servicosExtras && Array.isArray(s.servicosExtras)) {
-        s.servicosExtras.forEach(ex => { 
-          if (Object.prototype.hasOwnProperty.call(serviceCounts, ex)) {
-            (serviceCounts as any)[ex]++; 
-          }
-        });
+    s.servicosExtras.forEach(ex => { 
+        const match = ex.match(/(\d+)x (.+)/);
+        const name = match ? match[2] : ex;
+        const count = match ? parseInt(match[1]) : 1;
+        
+        if (Object.prototype.hasOwnProperty.call(serviceCounts, name)) {
+            (serviceCounts as any)[name] += count; 
+        }
+    });
       }
     });
 
@@ -633,23 +647,25 @@ const App: React.FC = () => {
     if (isAActive && aPerc < 1) allActiveMetasMet = false;
     if (isIActive && iPerc < 1) allActiveMetasMet = false;
     
-    const taxaGarantia = allActiveMetasMet ? 0.10 : 0.05;
+    console.log("Stats Calc - pPerc:", pPerc, "aPerc:", aPerc, "iPerc:", iPerc, "level:", level, "allActiveMetasMet:", allActiveMetasMet, "pTotal:", pTotal, "targets:", targets);
+    
+    const taxaGarantia = (allActiveMetasMet || level > 0) ? 0.10 : 0.05;
     const aComissao = aTotal * taxaGarantia;
     
     const accelBonus = (level > 0) ? pTotal * (targets.levels[level as 1|2|3].rate / 100) : 0;
     const finalBonusAcelerador = accelBonus;
-    const bonusGarantiaExtra = (level >= 1) ? pTotal * 0.006 : 0;
-
+    
     return {
       pTotal, aTotal, iTotal, pPerc, aPerc, iPerc, level, taxaGarantia, bateuOsTres: allActiveMetasMet,
       comissaoProdutos: pComissaoBase,
-      comissaoAssistencia: aComissao,
-      bonusGarantia: bonusGarantiaExtra,
+      comissaoProdutosTotal: pComissaoBase,
+      comissaoGarantiasTotal: aComissao,
       bonusServicos: totalExtras,
       bonusAcelerador: finalBonusAcelerador,
       bonusPorPedidoTotal,
       premiacaoExtraTotal,
-      ganhosTotais: pComissaoBase + aComissao + totalExtras + finalBonusAcelerador + bonusGarantiaExtra + bonusPorPedidoTotal + premiacaoExtraTotal,
+      outrosTotal: totalExtras + bonusPorPedidoTotal + premiacaoExtraTotal,
+      ganhosTotais: pComissaoBase + aComissao + totalExtras + finalBonusAcelerador + bonusPorPedidoTotal + premiacaoExtraTotal,
       faturamentoGeral: fatGeral
     };
   }, [savedSales, targets]);
@@ -757,21 +773,21 @@ const App: React.FC = () => {
 
               <div className="bg-emerald-50 p-8 rounded-[3rem] border border-emerald-100 shadow-xl shadow-emerald-200/20 flex flex-col justify-between">
                 <div>
-                  <span className="text-[10px] font-black text-emerald-600 uppercase tracking-widest block mb-2">Seus Ganhos Totais</span>
-                  <div className="text-4xl font-black text-emerald-600">{formatBRL(stats.ganhosTotais)}</div>
+                  <span className="text-[10px] font-black text-emerald-600 uppercase tracking-widest block mb-1">Total a Receber</span>
+                  <div className="text-3xl font-black text-emerald-600 tracking-tight">{formatBRL(stats.ganhosTotais)}</div>
                 </div>
-                <div className="mt-4 space-y-1">
-                   <div className="flex justify-between text-[9px] font-bold text-emerald-800">
-                      <span>Extras:</span>
-                      <span>{formatBRL(stats.bonusServicos)}</span>
+                <div className="mt-4 pt-4 border-t border-emerald-200/50 space-y-2">
+                   <div className="flex justify-between text-[10px] font-bold text-emerald-800">
+                      <span>Prods:</span>
+                      <span>{formatBRL(stats.comissaoProdutosTotal)}</span>
                    </div>
-                   <div className="flex justify-between text-[9px] font-bold text-emerald-800">
-                      <span>Pedidos:</span>
-                      <span>{formatBRL(stats.bonusPorPedidoTotal)}</span>
+                   <div className="flex justify-between text-[10px] font-bold text-emerald-800">
+                      <span>Garantias:</span>
+                      <span>{formatBRL(stats.comissaoGarantiasTotal)}</span>
                    </div>
-                   <div className="flex justify-between text-[9px] font-bold text-emerald-800">
-                      <span>Premiação Extra:</span>
-                      <span>{formatBRL(stats.premiacaoExtraTotal)}</span>
+                   <div className="flex justify-between text-[10px] font-bold text-emerald-800">
+                      <span>Outros:</span>
+                      <span>{formatBRL(stats.outrosTotal)}</span>
                    </div>
                 </div>
               </div>
@@ -1201,13 +1217,18 @@ const App: React.FC = () => {
       savedSales.forEach(s => {
         if (Array.isArray(s.servicosExtras)) {
           s.servicosExtras.forEach(ex => {
-            const item = serviceData.find(d => d.name === ex);
-            if (item) item.count++;
+            const match = ex.match(/(\d+)x (.+)/);
+            const name = match ? match[2] : ex;
+            const quantity = match ? parseInt(match[1]) : 1;
+            
+            const item = serviceData.find(d => d.name === name);
+            if (item) item.count += quantity;
           });
         }
       });
 
-      const totalServiceBonus = serviceData.reduce((acc, d) => acc + (d.count * d.bonus), 0) + totalComissaoAssistencia;
+      const totalServiceBonus = serviceData.reduce((acc, d) => acc + (d.count * d.bonus), 0);
+      const totalBonusPedido = targets.bonusPorPedido?.ativo ? (savedSales.filter(s => s.status !== 'cancelado').length * (targets.bonusPorPedido?.valor || 5)) : 0;
 
       return (
         <motion.div 
@@ -1231,24 +1252,72 @@ const App: React.FC = () => {
           </div>
 
           <div className="bg-white p-8 rounded-3xl border border-gray-200 flex flex-col items-center justify-center space-y-2 shadow-sm">
-            <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Ganhos Totais (Extras + Pedidos)</span>
-            <div className="text-4xl font-black text-emerald-600">{formatBRL(totalServiceBonus + stats.bonusPorPedidoTotal + stats.premiacaoExtraTotal)}</div>
+            <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{stats.level > 0 ? `Nível ${stats.level} Atingido` : 'Ganhos Totais'}</span>
+            <div className="text-4xl font-black text-emerald-600">{formatBRL(stats.ganhosTotais)}</div>
+            
+            {stats.level > 0 && (
+              <div className={`w-full mt-6 p-4 rounded-3xl shadow-lg border-2 ${stats.level === 1 ? 'border-amber-700' : stats.level === 2 ? 'border-slate-400' : 'border-yellow-400'} relative overflow-hidden ${
+                stats.level === 1 ? 'bg-gradient-to-br from-amber-200 to-amber-50' : 
+                stats.level === 2 ? 'bg-gradient-to-br from-slate-200 to-slate-50' : 
+                'bg-gradient-to-br from-yellow-200 to-yellow-50'
+              }`}>
+                <div className="relative z-10 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-10 h-10 rounded-full ${stats.level === 1 ? 'bg-amber-800' : stats.level === 2 ? 'bg-slate-500' : 'bg-yellow-600'} flex items-center justify-center text-white shadow-md animate-pulse`}>
+                      <Gem size={20} />
+                    </div>
+                    <div>
+                      <span className="text-[10px] font-black uppercase tracking-widest text-emerald-800 block">Bônus Conquista</span>
+                      <span className={`text-xs font-black ${stats.level === 1 ? 'text-amber-800' : stats.level === 2 ? 'text-slate-700' : 'text-yellow-800'} block`}>Nível {stats.level} Ativo</span>
+                    </div>
+                  </div>
+                  <span className={`text-lg font-black ${stats.level === 1 ? 'text-amber-900' : stats.level === 2 ? 'text-slate-800' : 'text-yellow-900'}`}>{formatBRL(stats.level > 0 ? (stats.pTotal * (targets.levels[stats.level as 1|2|3]?.rate / 100)) : 0)}</span>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="grid grid-cols-1 gap-4">
             
-            {/* Premiação Semanal - Placeholder for logic */}
             <div className="bg-white p-5 rounded-2xl border border-rose-200 flex items-center justify-between shadow-sm">
                 <div className="flex items-center gap-4">
                   <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-rose-50 border border-rose-100">
                     <Target size={18} className="text-rose-600" />
                   </div>
                   <div>
-                    <span className="text-[10px] font-black text-gray-800 uppercase tracking-tighter">Premiação Semanal</span>
+                    <span className="text-[10px] font-black text-gray-800 uppercase tracking-tighter">Premiação</span>
                   </div>
                 </div>
                 <div className="text-right">
                   <div className="text-sm font-black text-rose-600">{formatBRL(stats.premiacaoExtraTotal)}</div>
+                </div>
+            </div>
+
+            <div className="bg-white p-5 rounded-2xl border border-emerald-200 flex items-center justify-between shadow-sm">
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-emerald-50 border border-emerald-100">
+                    <ShieldCheck size={18} className="text-emerald-600" />
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-black text-gray-800 uppercase tracking-tighter">Comissão Garantia</span>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-sm font-black text-emerald-900">{formatBRL(stats.comissaoGarantiasTotal)}</div>
+                </div>
+            </div>
+
+            <div className="bg-white p-5 rounded-2xl border border-gray-200 flex items-center justify-between shadow-sm">
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-purple-50 border border-purple-100">
+                    <DollarSign size={18} className="text-purple-600" />
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-black text-gray-800 uppercase tracking-tighter">Comissão Produtos</span>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-sm font-black text-gray-900">{formatBRL(stats.comissaoProdutos)}</div>
                 </div>
             </div>
 

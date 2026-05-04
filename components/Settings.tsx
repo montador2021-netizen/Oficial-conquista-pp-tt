@@ -288,7 +288,10 @@ const Settings: React.FC<SettingsProps> = ({ targets, onSave, onClose, showInsta
             <RotateCcw size={14} /> Resetar
           </button>
           <button 
-            onClick={() => onSave(tempTargets)}
+            onClick={() => {
+              console.log("Settings: Botão Salvar clicado, tempTargets:", tempTargets);
+              onSave(tempTargets);
+            }}
             className="flex-[2] py-4 bg-purple-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 shadow-lg shadow-purple-500/20 active:scale-95 transition-all hover:bg-purple-700"
           >
             <Save size={14} /> Salvar Alterações
