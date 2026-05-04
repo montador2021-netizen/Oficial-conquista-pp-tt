@@ -1,0 +1,38 @@
+{
+  "entities": {
+    "Opportunity": {
+      "title": "Opportunity",
+      "description": "An opportunity in the CRM",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "stage": { "type": "string" },
+        "vendedorId": { "type": "string" }
+      },
+      "required": ["id", "title", "stage"]
+    },
+    "Sale": {
+      "title": "Sale",
+      "description": "A sale in the system",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "numeroPedido": { "type": "string" },
+        "total": { "type": "number" },
+        "vendedorId": { "type": "string" }
+      },
+      "required": ["id", "numeroPedido", "total"]
+    }
+  },
+  "firestore": {
+    "opportunities/{opportunityId}": {
+      "schema": "Opportunity",
+      "description": "CRM opportunities"
+    },
+    "vendas/{vendaId}": {
+      "schema": "Sale",
+      "description": "Sales records"
+    }
+  }
+}
