@@ -1945,11 +1945,9 @@ const App: React.FC = () => {
                  />
               </div>
            </div>
-        </header>
 
-        <main className="flex-1 overflow-y-auto p-8">
-          {user ? renderContent() : <Login onLogin={() => {}} />}
-        </main>
+
+
 
         {/* BOTÃO FLUTUANTE DIRETO */}
         <div className="fixed bottom-8 right-8 z-40">
@@ -1959,10 +1957,7 @@ const App: React.FC = () => {
            >
               <Plus size={32} strokeWidth={2.5} />
            </button>
-        </div>
-      </div>
-
-      {/* Modal de Detalhes do Pedido */}
+ 
       {selectedSale && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-gray-900/40 backdrop-blur-sm" onClick={() => setSelectedSale(null)}></div>
