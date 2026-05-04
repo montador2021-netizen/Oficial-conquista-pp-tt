@@ -950,8 +950,8 @@ const App: React.FC = () => {
             </div>
             <div className="flex gap-2">
               <motion.button
-                whileHover={{ scale: 1.05, y: -5 }}
-                whileTap={{ scale: 0.95 }}
+                whileHover={{ scale: 1.05, y: -5 }}                
+                whileTap={{ scale: 0.95, backgroundColor: "#7e22ce" }}
                 onClick={() => setActiveNav(NavItem.Resumos)}
                 className="bg-gray-100 text-gray-600 px-3 py-2 rounded-xl font-black text-[10px] uppercase border border-gray-200"
               >
@@ -1128,7 +1128,7 @@ const App: React.FC = () => {
             </div>
             <motion.button
               whileHover={{ scale: 1.05, y: -5 }}
-              whileTap={{ scale: 0.95 }}
+              whileTap={{ scale: 0.95, backgroundColor: "#7e22ce" }}
               onClick={() => setActiveNav(NavItem.Resumos)}
               className="bg-gray-100 text-gray-600 px-3 py-2 rounded-xl font-black text-[10px] uppercase border border-gray-200"
             >
@@ -1243,7 +1243,7 @@ const App: React.FC = () => {
             </div>
             <motion.button
               whileHover={{ scale: 1.05, y: -5 }}
-              whileTap={{ scale: 0.95 }}
+              whileTap={{ scale: 0.95, backgroundColor: "#7e22ce" }}
               onClick={() => setActiveNav(NavItem.Resumos)}
               className="bg-gray-100 text-gray-600 px-3 py-2 rounded-xl font-black text-[10px] uppercase border border-gray-200"
             >
@@ -1399,7 +1399,7 @@ const App: React.FC = () => {
              </div>
              <motion.button
                whileHover={{ scale: 1.05, y: -5 }}
-               whileTap={{ scale: 0.95 }}
+               whileTap={{ scale: 0.95, backgroundColor: "#7e22ce" }}
                onClick={() => setActiveNav(NavItem.Resumos)}
                className="bg-gray-100 text-gray-600 px-3 py-2 rounded-xl font-black text-[10px] uppercase border border-gray-200"
              >
@@ -1625,9 +1625,9 @@ const App: React.FC = () => {
                )}
                <motion.button
                  whileHover={{ scale: 1.05 }}
-                 whileTap={{ scale: 0.95 }}
+                 whileTap={{ scale: 0.95, backgroundColor: "#7e22ce" }}
                  onClick={() => setActiveNav(NavItem.Resumos)}
-                 className="bg-gray-100 text-gray-600 px-3 py-2 rounded-xl font-black text-[10px] uppercase border border-gray-200"
+                 className="bg-purple-600 text-white px-4 py-2 rounded-xl font-black text-[10px] uppercase shadow-lg shadow-purple-500/20 active:scale-95 transition-all"
                >
                  Voltar
                </motion.button>
@@ -1959,7 +1959,7 @@ const App: React.FC = () => {
                 </div>
                 <motion.button 
                   whileHover={{ scale: 1.05, y: -5 }}
-                  whileTap={{ scale: 0.95 }}
+                  whileTap={{ scale: 0.95, backgroundColor: "#7e22ce" }}
                   onClick={() => setSelectedSale(null)} className="bg-gray-100 text-gray-600 px-3 py-2 rounded-xl font-black text-[10px] uppercase border border-gray-200">
                   Voltar
                 </motion.button>
@@ -2091,7 +2091,7 @@ const App: React.FC = () => {
             <div className="flex gap-3">
               <motion.button 
                 whileHover={{ scale: 1.05, y: -5 }}
-                whileTap={{ scale: 0.95 }}
+                whileTap={{ scale: 0.95, backgroundColor: "#7e22ce" }}
                 onClick={() => setSaleToDelete(null)}
                 className="flex-1 bg-gray-100 text-gray-600 py-2 rounded-xl font-black text-[10px] uppercase border border-gray-200"
               >
