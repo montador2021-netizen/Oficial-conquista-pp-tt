@@ -58,6 +58,7 @@ const CUSTOMERS_KEY = 'conquista_app_customers_v1';
 const OPPORTUNITIES_KEY = 'conquista_app_opportunities_v1';
 
 import { supabase } from './src/lib/supabaseClient';
+import { db, auth } from './src/services/firebaseConfig';
 
 const DEFAULT_TARGETS: Targets = {
   product: 50000,
