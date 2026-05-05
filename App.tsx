@@ -532,12 +532,17 @@ const App: React.FC = () => {
   };
 
   const saveSale = async (newSaleData: any) => {
-    console.log("Iniciando salvamento offline-first...");
+    console.log("Iniciando salvamento...");
     
+    if (!user) {
+      alert("Erro: Usuário não autenticado. Por favor, faça login.");
+      return;
+    }
+
     const saleObj: Sale = {
       id: crypto.randomUUID(), // Gera um ID único localmente
       numeroPedido: newSaleData.pedido,
-      vendedorId: user?.id || 'unknown',
+      vendedorId: user.id,
       clienteId: newSaleData.clienteId,
       valorProduto: newSaleData.produto,
       valorAssistencia: newSaleData.assistencia,
