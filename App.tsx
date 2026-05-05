@@ -1903,7 +1903,7 @@ const App: React.FC = () => {
       <InstallPrompt />
 
       <div className="flex-1 flex flex-col h-screen overflow-hidden relative">
-        <div className="h-16 flex items-center justify-between px-8 sticky top-0 z-40 bg-white border-b border-gray-200 shadow-sm">
+        <header className="h-16 flex items-center justify-between px-8 sticky top-0 z-40 bg-white border-b border-gray-200 shadow-sm">
            <div className="flex items-center gap-4 cursor-pointer" onClick={() => setActiveNav(NavItem.Resumos)}>
              <div className="w-8 h-8 bg-purple-600 rounded-lg flex items-center justify-center text-white">
                <Home size={18} />
@@ -1945,11 +1945,13 @@ const App: React.FC = () => {
                  />
               </div>
            </div>
+        </header>
 
+        <main className="flex-1 overflow-y-auto p-8">
+          {user ? renderContent() : <Login onLogin={() => {}} />}
+        </main>
 
-
-
-        {/* BOTAO FLUTUANTE DIRETO */}
+        {/* BOTÃO FLUTUANTE DIRETO */}
         <div className="fixed bottom-8 right-8 z-40">
            <button 
              onClick={() => setActiveNav(NavItem.AdicionarVenda)} 
@@ -1957,7 +1959,10 @@ const App: React.FC = () => {
            >
               <Plus size={32} strokeWidth={2.5} />
            </button>
- 
+        </div>
+      </div>
+
+      {/* Modal de Detalhes do Pedido */}
       {selectedSale && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-gray-900/40 backdrop-blur-sm" onClick={() => setSelectedSale(null)}></div>
@@ -2118,10 +2123,8 @@ const App: React.FC = () => {
           </motion.div>
         </div>
       )}
-      </div>
-      </div>
-      </div>
     </div>
   );
 };
+
 export default App;
