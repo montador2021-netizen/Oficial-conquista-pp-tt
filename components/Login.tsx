@@ -19,8 +19,9 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
     setLoading(true);
     setError(null);
     try {
-      // Cria um email fictício usando o identificador
-      const email = `${identifier.toLowerCase().replace(/\s+/g, '.')}@loja.com`;
+      // Cria um email fictício usando o identificador, removendo caracteres inválidos
+      const sanitisedIdentifier = identifier.toLowerCase().replace(/[^a-zA-Z0-9]/g, '');
+      const email = `${sanitisedIdentifier}@loja.com`;
       
       let result;
       if (isRegistering) {
