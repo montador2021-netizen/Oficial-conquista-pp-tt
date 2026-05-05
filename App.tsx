@@ -59,7 +59,7 @@ const OPPORTUNITIES_KEY = 'conquista_app_opportunities_v1';
 
 import { supabase } from './src/lib/supabaseClient';
 import { db, auth } from './src/services/firebaseConfig';
-import { collection, addDoc, doc, setDoc, updateDoc } from 'firebase/firestore';
+import { collection, addDoc, doc, setDoc, updateDoc, query, where, getDocs } from 'firebase/firestore';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 
 const DEFAULT_TARGETS: Targets = {
@@ -200,14 +200,15 @@ const App: React.FC = () => {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (user) {
-        const appUser = {
+        const appUser: User = {
           id: user.uid,
           firstName: user.displayName?.split(' ')[0] || 'Usuário',
           lastName: user.displayName?.split(' ').slice(1).join(' ') || '',
           store: 'Loja Padrão',
+          password: 'firebase-auth-user',
           role: 'vendedor',
           lastLogin: new Date().toISOString(),
-          photoUrl: user.photoURL
+          photoUrl: user.photoURL ?? undefined
         };
         setUser(appUser);
         logAccess(appUser);
@@ -283,22 +284,42 @@ const App: React.FC = () => {
       
       console.log("Buscando dados no Supabase...");
       try {
-        let query = supabase.from('vendas').select('*');
-        
-        // Se não for admin, filtra apenas as próprias vendas
-        if (!isAdmin) {
-          query = query.eq('vendedorId', user.id);
-        } else if (viewingVendedorId) {
-          query = query.eq('vendedorId', viewingVendedorId);
+        let salesData: any[] = [];
+        try {
+          let q;
+          if (!isAdmin) q = query(collection(db, 'vendas'), where('vendedorId', '==', user.id));
+          else if (viewingVendedorId) q = query(collection(db, 'vendas'), where('vendedorId', '==', viewingVendedorId));
+          else q = collection(db, 'vendas');
+          
+          const querySnapshot = await getDocs(q);
+          salesData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() as any }));
+          console.log("Vendas carregadas no Firestore:", salesData);
+        } catch (fbErr) {
+          console.error("Erro ao buscar vendas no Firestore, tentando Supabase:", fbErr);
+          // Fallback to supabase
+          let query = supabase.from('vendas').select('*');
+          if (!isAdmin) {
+            query = query.eq('vendedorId', user.id);
+          } else if (viewingVendedorId) {
+            query = query.eq('vendedorId', viewingVendedorId);
+          }
+          const { data, error } = await query;
+          if (error) throw error;
+          salesData = data || [];
         }
-
-        const { data: salesData, error: salesError } = await query;
-        if (salesError) throw salesError;
         
-        console.log("Vendas carregadas:", salesData);
         if (salesData) {
-          setSavedSales(salesData as Sale[]);
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(salesData));
+          const dbSales = salesData as Sale[];
+          const localSales = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+          
+          const salesMap = new Map();
+          dbSales.forEach(s => salesMap.set(s.id, s));
+          localSales.forEach((s: Sale) => salesMap.set(s.id, s));
+          
+          const mergedSales = Array.from(salesMap.values());
+          
+          setSavedSales(mergedSales);
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(mergedSales));
         }
       } catch (err) {
         console.error("Erro ao buscar vendas:", err);
