@@ -20,7 +20,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
     setError(null);
     try {
       // Cria um email fictício usando o identificador
-      const email = `${identifier.toLowerCase().replace(/\s+/g, '.')}@loja.virtual`;
+      const email = `${identifier.toLowerCase().replace(/\s+/g, '.')}@loja.com`;
       
       let result;
       if (isRegistering) {
