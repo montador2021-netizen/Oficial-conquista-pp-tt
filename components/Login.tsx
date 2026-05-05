@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
-import { ShieldCheck, ArrowRight } from 'lucide-react';
+import { ShieldCheck } from 'lucide-react';
 import { auth } from '../src/services/firebaseConfig';
-import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
 
 interface LoginProps {
   onLogin: (user: any) => void;
@@ -11,30 +11,44 @@ interface LoginProps {
 const Login: React.FC<LoginProps> = ({ onLogin }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [identifier, setIdentifier] = useState('');
+  const [password, setPassword] = useState('');
+  const [isRegistering, setIsRegistering] = useState(false);
 
-  const handleGoogleLogin = async () => {
+  const handleAuth = async () => {
     setLoading(true);
     setError(null);
     try {
-      const provider = new GoogleAuthProvider();
-      const result = await signInWithPopup(auth, provider);
+      // Cria um email fictício usando o identificador
+      const email = `${identifier.toLowerCase().replace(/\s+/g, '.')}@loja.virtual`;
+      
+      let result;
+      if (isRegistering) {
+        result = await createUserWithEmailAndPassword(auth, email, password);
+        alert('Conta criada com sucesso! Agora você pode entrar.');
+        setIsRegistering(false);
+        setPassword('');
+        setLoading(false);
+        return;
+      } else {
+        result = await signInWithEmailAndPassword(auth, email, password);
+      }
+      
       const user = result.user;
       
-      // Mapear usuário do Firebase para o formato esperado pelo App
       const appUser = {
         id: user.uid,
-        firstName: user.displayName?.split(' ')[0] || 'Usuário',
-        lastName: user.displayName?.split(' ').slice(1).join(' ') || '',
+        firstName: identifier.split('.')[0] || 'Usuário',
+        lastName: '',
         store: 'Loja Padrão',
         role: 'vendedor',
         lastLogin: new Date().toISOString(),
-        photoUrl: user.photoURL
       };
       
       onLogin(appUser);
     } catch (err: any) {
-      console.error('Erro de login:', err);
-      setError('Erro ao autenticar com Google: ' + err.message);
+      console.error('Erro de autenticação:', err);
+      setError('Erro: ' + err.message);
     } finally {
       setLoading(false);
     }
@@ -55,16 +69,44 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
             <h1 className="text-3xl font-black text-gray-900 tracking-tighter uppercase italic leading-none">
               Conquista <span className="text-purple-600">App</span>
             </h1>
-            <p className="text-gray-400 font-bold uppercase text-[9px] tracking-[0.4em] mt-2">Acesso Restrito</p>
+            <p className="text-gray-400 font-bold uppercase text-[9px] tracking-[0.4em] mt-2">
+              {isRegistering ? 'Primeiro Acesso' : 'Acesso Restrito'}
+            </p>
           </div>
         </div>
 
+        <div className="space-y-4">
+          <input
+            type="text"
+            placeholder="Seu identificador (ex: nome.sobrenome)"
+            value={identifier}
+            onChange={(e) => setIdentifier(e.target.value)}
+            className="w-full bg-gray-50 border border-gray-200 p-4 rounded-2xl outline-none focus:border-purple-500 transition-all font-bold text-sm"
+          />
+          <input
+            type="password"
+            placeholder="Senha"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="w-full bg-gray-50 border border-gray-200 p-4 rounded-2xl outline-none focus:border-purple-500 transition-all font-bold text-sm"
+          />
+        </div>
+
+        {error && <p className="text-red-500 text-xs text-center font-bold">{error}</p>}
+
         <button
-          onClick={handleGoogleLogin}
-          disabled={loading}
-          className="w-full bg-white border border-gray-200 text-gray-800 py-4 rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-lg shadow-gray-200/20 active:scale-95 transition-all flex items-center justify-center gap-3 disabled:opacity-50"
+          onClick={handleAuth}
+          disabled={loading || !identifier || !password}
+          className="w-full bg-purple-600 text-white py-4 rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-lg shadow-purple-500/20 active:scale-95 transition-all flex items-center justify-center gap-3 disabled:opacity-50"
         >
-          {loading ? 'Autenticando...' : 'Entrar com Google'}
+          {loading ? 'Processando...' : (isRegistering ? 'Criar Acesso' : 'Entrar')}
+        </button>
+
+        <button
+          onClick={() => setIsRegistering(!isRegistering)}
+          className="w-full text-gray-500 text-[10px] font-bold uppercase tracking-widest hover:text-purple-600 transition-colors"
+        >
+          {isRegistering ? 'Já tenho acesso. Entrar.' : 'Primeiro acesso? Cadastrar.'}
         </button>
       </motion.div>
     </div>
