@@ -1,12 +1,10 @@
-# Security Specification
+# Security Spec - Conquista App
 
-## Data Invariants
-- Any user can create/read opportunities and sales they are involved in.
+1. **Invariantes:**
+   - Cada venda (/vendas) e oportunidade (/opportunities) é vinculada estritamente ao `vendedorId` (request.auth.uid).
+   - A leitura e escrita são limitadas apenas ao dono do documento.
 
-## The "Dirty Dozen" Payloads (Conceptual Test)
-- Attempting to bypass auth: Should return PERMISSION_DENIED.
-- Attempting to change an immutable field: Should return PERMISSION_DENIED.
-- Attempting to inject junk in ID fields: Should return PERMISSION_DENIED.
-
-## Auth Logic
-- All write/read operations require `request.auth != null`.
+2. **Cenários Críticos:**
+   - Usuário A tentando ler /vendas de Usuário B.
+   - Usuário A tentando gravar venda como Usuário B.
+   - Tentativa de alterar o `vendedorId` em um update.

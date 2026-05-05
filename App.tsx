@@ -532,15 +532,13 @@ const App: React.FC = () => {
   };
 
   const saveSale = async (newSaleData: any) => {
-    console.log("Iniciando salvamento...");
-    
     if (!user) {
-      alert("Erro: Usuário não autenticado. Por favor, faça login.");
+      alert("Erro: Usuário não autenticado.");
       return;
     }
 
     const saleObj: Sale = {
-      id: crypto.randomUUID(), // Gera um ID único localmente
+      id: crypto.randomUUID(),
       numeroPedido: newSaleData.pedido,
       vendedorId: user.id,
       clienteId: newSaleData.clienteId,
@@ -556,34 +554,14 @@ const App: React.FC = () => {
       status: 'ativo'
     };
 
-    // 1. Salvar localmente IMEDIATAMENTE
-    setSavedSales(prev => [saleObj, ...prev]);
-    const currentSales = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-    localStorage.setItem(STORAGE_KEY, JSON.stringify([saleObj, ...currentSales]));
-    
-    // 2. Redirecionar imediatamente
-    setActiveNav(NavItem.ResumoPedido);
-
-    // 3. Tentar sincronizar com Supabase e Firebase
     try {
-      console.log("Tentando sincronizar com Supabase e Firebase...");
-      
-      // Firestore
-      try {
-        await addDoc(collection(db, 'vendas'), saleObj);
-        console.log("Venda salva no Firestore com sucesso!");
-      } catch (fbError) {
-        console.error("Erro ao salvar no Firestore:", fbError);
-      }
-
-      const { error } = await supabase.from('vendas').insert([saleObj]);
-      if (error) throw error;
-      console.log("Sincronizado com sucesso (Supabase)!");
-    } catch (error) {
-      console.warn("Erro ao sincronizar, salvando para depois:", error);
-      // Salva na fila de pendentes para tentar novamente quando voltar online
-      const pending = JSON.parse(localStorage.getItem('pending_sales') || '[]');
-      localStorage.setItem('pending_sales', JSON.stringify([...pending, saleObj]));
+      await addDoc(collection(db, 'vendas'), saleObj);
+      setSavedSales(prev => [saleObj, ...prev]);
+      setActiveNav(NavItem.ResumoPedido);
+      console.log("Venda salva com sucesso no Firestore!");
+    } catch (fbError) {
+      console.error("Erro ao salvar no Firestore:", fbError);
+      alert("Erro ao salvar no banco de dados.");
     }
   };
 
