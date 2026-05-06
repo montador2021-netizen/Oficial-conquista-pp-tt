@@ -339,13 +339,16 @@ const App: React.FC = () => {
 
       try {
         // Metas agora podem ser individuais ou globais. Vamos tentar buscar por vendedorId primeiro.
-        let targetsQuery = supabase.from('settings').select('*').eq('id', `targets_${user.id}`).single();
-        let { data: targetsData } = await targetsQuery;
+        const targetId = `targets_${user.id}`;
+        const targetDocRef = doc(db, 'settings', targetId);
+        const targetDoc = await getDoc(targetDocRef);
+        let targetsData = targetDoc.exists() ? targetDoc.data() : null;
 
         if (!targetsData) {
           // Se não tiver individual, tenta a global
-          const { data: globalTargets } = await supabase.from('settings').select('*').eq('id', 'targets').single();
-          targetsData = globalTargets;
+          const globalTargetDocRef = doc(db, 'settings', 'targets');
+          const globalTargetDoc = await getDoc(globalTargetDocRef);
+          targetsData = globalTargetDoc.exists() ? globalTargetDoc.data() : null;
         }
 
         if (!targetsData) {
@@ -373,14 +376,17 @@ const App: React.FC = () => {
       }
 
       try {
-        let query = supabase.from('customers').select('*');
+        let q = collection(db, 'customers');
+        let customersQuery = q;
         if (!isAdmin) {
-          query = query.eq('vendedorId', user.id);
+          customersQuery = query(q, where('vendedorId', '==', user.id));
         } else if (viewingVendedorId) {
-          query = query.eq('vendedorId', viewingVendedorId);
+          customersQuery = query(q, where('vendedorId', '==', viewingVendedorId));
         }
 
-        const { data: customersData } = await query;
+        const querySnapshot = await getDocs(customersQuery);
+        const customersData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() as any }));
+        
         if (customersData) {
           setCustomers(customersData as Customer[]);
           localStorage.setItem(CUSTOMERS_KEY, JSON.stringify(customersData));
@@ -390,19 +396,20 @@ const App: React.FC = () => {
       }
       
       try {
-        console.log("Buscando oportunidades no Supabase...");
-        let query = supabase.from('opportunities').select('*');
+        console.log("Buscando oportunidades no Firestore...");
+        let q = collection(db, 'opportunities');
+        let oppsQuery = q;
         if (!isAdmin) {
-          query = query.eq('vendedorId', user.id);
+          oppsQuery = query(q, where('vendedorId', '==', user.id));
         } else if (viewingVendedorId) {
-          query = query.eq('vendedorId', viewingVendedorId);
+          oppsQuery = query(q, where('vendedorId', '==', viewingVendedorId));
         }
 
-        const { data: oppsData, error: oppsError } = await query;
-        if (oppsError) throw oppsError;
+        const querySnapshot = await getDocs(oppsQuery);
+        const oppsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() as any }));
         
         if (oppsData) {
-          console.log("Oportunidades brutas do DB:", oppsData);
+          console.log("Oportunidades brutas do Firestore:", oppsData);
           const mappedOpps = oppsData.map((o: any) => {
             const vId = o.vendedorId || o.vendedor_id || o.vendedorid || 'unknown';
             const pInt = o.productInterest || o.product_interest || o.interesse || '';
@@ -425,7 +432,7 @@ const App: React.FC = () => {
           });
           
           console.log("Oportunidades mapeadas finais:", mappedOpps);
-          if (mappedOpps.length > 0 || (localOpps && JSON.parse(localOpps).length === 0)) {
+          if (mappedOpps.length > 0) {
             setOpportunities(mappedOpps as Opportunity[]);
             localStorage.setItem(OPPORTUNITIES_KEY, JSON.stringify(mappedOpps));
           }
@@ -505,15 +512,15 @@ const App: React.FC = () => {
     }
 
     try {
-      const { error } = await supabase.from('vendas').update({ status: 'cancelado' }).eq('id', sale.id);
-      if (error) throw error;
+      await updateDoc(doc(db, 'vendas', sale.id), { status: 'cancelado' });
       // Atualizar estado local
       setSavedSales(prev => prev.map(s => s.id === sale.id ? { ...s, status: 'cancelado' } : s));
       // Atualizar localStorage
       const updatedSales = savedSales.map(s => s.id === sale.id ? { ...s, status: 'cancelado' } : s);
       localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedSales));
+      console.log("Venda cancelada no Firestore.");
     } catch (error) {
-      console.error("Erro ao cancelar venda:", error);
+      console.error("Erro ao cancelar venda no Firestore:", error);
     }
   };
 
@@ -715,19 +722,31 @@ const App: React.FC = () => {
       totalComprado: 0,
       pedidosCount: 0
     };
-    const { error } = await supabase.from('customers').insert([newCustomer]);
-    if (error) console.error("Erro ao adicionar cliente:", error);
+    try {
+      await addDoc(collection(db, 'customers'), newCustomer);
+      console.log("Cliente adicionado ao Firestore.");
+    } catch (error) {
+      console.error("Erro ao adicionar cliente ao Firestore:", error);
+    }
   };
 
   const deleteCustomer = async (id: string) => {
-    const { error } = await supabase.from('customers').delete().eq('id', id);
-    if (error) console.error("Erro ao deletar cliente:", error);
+    try {
+      await deleteDoc(doc(db, 'customers', id));
+      console.log("Cliente deletado do Firestore.");
+    } catch (error) {
+      console.error("Erro ao deletar cliente do Firestore:", error);
+    }
   };
 
   const updateCustomer = async (updated: Customer) => {
     const { id, ...data } = updated;
-    const { error } = await supabase.from('customers').update(data).eq('id', id);
-    if (error) console.error("Erro ao atualizar cliente:", error);
+    try {
+      await setDoc(doc(db, 'customers', id), data, { merge: true });
+      console.log("Cliente atualizado no Firestore.");
+    } catch (error) {
+      console.error("Erro ao atualizar cliente no Firestore:", error);
+    }
   };
 
   const renderContent = () => {
