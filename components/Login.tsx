@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import { ShieldCheck } from 'lucide-react';
 import { auth } from '../src/services/firebaseConfig';
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signInAnonymously } from 'firebase/auth';
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signInAnonymously, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 
 interface LoginProps {
   onLogin: (user: any) => void;
@@ -14,6 +14,33 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [isRegistering, setIsRegistering] = useState(false);
+  
+  const googleProvider = new GoogleAuthProvider();
+
+  const handleGoogleAuth = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const result = await signInWithPopup(auth, googleProvider);
+      const user = result.user;
+      
+      const appUser = {
+        id: user.uid,
+        firstName: user.displayName?.split(' ')[0] || 'Usuário',
+        lastName: user.displayName?.split(' ')[1] || '',
+        store: 'Loja Padrão',
+        role: 'vendedor',
+        lastLogin: new Date().toISOString(),
+      };
+      
+      onLogin(appUser);
+    } catch (err: any) {
+      console.error('Erro de autenticação com Google:', err);
+      setError('Erro no acesso com Google: ' + err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleAnonymousAuth = async () => {
     setLoading(true);
@@ -133,6 +160,14 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
           className="w-full bg-purple-600 text-white py-4 rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-lg shadow-purple-500/20 active:scale-95 transition-all flex items-center justify-center gap-3 disabled:opacity-50"
         >
           {loading ? 'Processando...' : (isRegistering ? 'Criar Acesso' : 'Entrar')}
+        </button>
+        
+        <button
+          onClick={handleGoogleAuth}
+          disabled={loading}
+          className="w-full bg-white text-gray-700 py-4 rounded-2xl font-bold text-xs uppercase tracking-[0.2em] border border-gray-200 active:scale-95 transition-all flex items-center justify-center gap-3 disabled:opacity-50"
+        >
+          Entrar com Google
         </button>
 
         <button
