@@ -168,6 +168,7 @@ const App: React.FC = () => {
         console.log("Oportunidade salva no Firestore");
       } catch (fbError) {
         console.error("Erro ao salvar no Firestore:", fbError);
+        alert("Erro ao salvar oportunidade: " + (fbError instanceof Error ? fbError.message : String(fbError)));
       }
 
       // Atualizar estado local
@@ -561,7 +562,17 @@ const App: React.FC = () => {
       console.log("Venda salva com sucesso no Firestore!");
     } catch (fbError) {
       console.error("Erro ao salvar no Firestore:", fbError);
-      alert("Erro ao salvar no banco de dados.");
+      
+      const errInfo = {
+        error: fbError instanceof Error ? fbError.message : String(fbError),
+        operationType: 'create',
+        path: 'vendas',
+        authInfo: {
+          userId: auth.currentUser?.uid,
+        }
+      };
+      
+      alert("Erro ao salvar no banco: " + JSON.stringify(errInfo));
     }
   };
 
