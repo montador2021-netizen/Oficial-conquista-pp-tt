@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import { ShieldCheck } from 'lucide-react';
 import { auth } from '../src/services/firebaseConfig';
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signInAnonymously, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
+import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 
 interface LoginProps {
   onLogin: (user: any) => void;
@@ -11,9 +11,6 @@ interface LoginProps {
 const Login: React.FC<LoginProps> = ({ onLogin }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [identifier, setIdentifier] = useState('');
-  const [password, setPassword] = useState('');
-  const [isRegistering, setIsRegistering] = useState(false);
   
   const googleProvider = new GoogleAuthProvider();
 
@@ -27,88 +24,17 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
       const appUser = {
         id: user.uid,
         firstName: user.displayName?.split(' ')[0] || 'Usuário',
-        lastName: user.displayName?.split(' ')[1] || '',
+        lastName: user.displayName?.split(' ')?.slice?.(1)?.join(' ') || '',
         store: 'Loja Padrão',
         role: 'vendedor',
         lastLogin: new Date().toISOString(),
+        photoUrl: user.photoURL ?? undefined
       };
       
       onLogin(appUser);
     } catch (err: any) {
       console.error('Erro de autenticação com Google:', err);
       setError('Erro no acesso com Google: ' + err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleAnonymousAuth = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const result = await signInAnonymously(auth);
-      const user = result.user;
-      
-      const appUser = {
-        id: user.uid,
-        firstName: 'Visitante',
-        lastName: '',
-        store: 'Loja Padrão',
-        role: 'visitante',
-        lastLogin: new Date().toISOString(),
-      };
-      
-      onLogin(appUser);
-    } catch (err: any) {
-      console.error('Erro de autenticação anônima:', err);
-      setError('Erro no acesso anônimo: ' + err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleAuth = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      // Cria um email fictício usando o identificador, removendo caracteres inválidos
-      const sanitisedIdentifier = identifier.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
-      
-      if (!sanitisedIdentifier) {
-        throw new Error("Identificador inválido.");
-      }
-
-      const email = `${sanitisedIdentifier}@loja.com`;
-      
-      console.log('Tentando autenticar com email:', email); // Debug
-      
-      let result;
-      if (isRegistering) {
-        result = await createUserWithEmailAndPassword(auth, email, password);
-        alert('Conta criada com sucesso! Agora você pode entrar.');
-        setIsRegistering(false);
-        setPassword('');
-        setLoading(false);
-        return;
-      } else {
-        result = await signInWithEmailAndPassword(auth, email, password);
-      }
-      
-      const user = result.user;
-      
-      const appUser = {
-        id: user.uid,
-        firstName: identifier.split('.')[0] || 'Usuário',
-        lastName: '',
-        store: 'Loja Padrão',
-        role: 'vendedor',
-        lastLogin: new Date().toISOString(),
-      };
-      
-      onLogin(appUser);
-    } catch (err: any) {
-      console.error('Erro de autenticação:', err);
-      setError('Erro: ' + err.message);
     } finally {
       setLoading(false);
     }
@@ -130,37 +56,12 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
               Conquista <span className="text-purple-600">App</span>
             </h1>
             <p className="text-gray-400 font-bold uppercase text-[9px] tracking-[0.4em] mt-2">
-              {isRegistering ? 'Primeiro Acesso' : 'Acesso Restrito'}
+              Acesso Restrito
             </p>
           </div>
         </div>
 
-        <div className="space-y-4">
-          <input
-            type="text"
-            placeholder="Seu identificador (ex: nome.sobrenome)"
-            value={identifier}
-            onChange={(e) => setIdentifier(e.target.value)}
-            className="w-full bg-gray-50 border border-gray-200 p-4 rounded-2xl outline-none focus:border-purple-500 transition-all font-bold text-sm"
-          />
-          <input
-            type="password"
-            placeholder="Senha"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="w-full bg-gray-50 border border-gray-200 p-4 rounded-2xl outline-none focus:border-purple-500 transition-all font-bold text-sm"
-          />
-        </div>
-
         {error && <p className="text-red-500 text-xs text-center font-bold">{error}</p>}
-
-        <button
-          onClick={handleAuth}
-          disabled={loading || !identifier || !password}
-          className="w-full bg-purple-600 text-white py-4 rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-lg shadow-purple-500/20 active:scale-95 transition-all flex items-center justify-center gap-3 disabled:opacity-50"
-        >
-          {loading ? 'Processando...' : (isRegistering ? 'Criar Acesso' : 'Entrar')}
-        </button>
         
         <button
           onClick={handleGoogleAuth}
@@ -170,20 +71,6 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
           Entrar com Google
         </button>
 
-        <button
-          onClick={handleAnonymousAuth}
-          disabled={loading}
-          className="w-full bg-white text-gray-700 py-4 rounded-2xl font-bold text-xs uppercase tracking-[0.2em] border border-gray-200 active:scale-95 transition-all flex items-center justify-center gap-3 disabled:opacity-50"
-        >
-          Entrar como Visitante
-        </button>
-
-        <button
-          onClick={() => setIsRegistering(!isRegistering)}
-          className="w-full text-gray-500 text-[10px] font-bold uppercase tracking-widest hover:text-purple-600 transition-colors"
-        >
-          {isRegistering ? 'Já tenho acesso. Entrar.' : 'Primeiro acesso? Cadastrar.'}
-        </button>
       </motion.div>
     </div>
   );
