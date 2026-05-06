@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import { ShieldCheck } from 'lucide-react';
 import { auth } from '../src/services/firebaseConfig';
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signInAnonymously } from 'firebase/auth';
 
 interface LoginProps {
   onLogin: (user: any) => void;
@@ -15,12 +15,37 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
   const [password, setPassword] = useState('');
   const [isRegistering, setIsRegistering] = useState(false);
 
+  const handleAnonymousAuth = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const result = await signInAnonymously(auth);
+      const user = result.user;
+      
+      const appUser = {
+        id: user.uid,
+        firstName: 'Visitante',
+        lastName: '',
+        store: 'Loja Padrão',
+        role: 'visitante',
+        lastLogin: new Date().toISOString(),
+      };
+      
+      onLogin(appUser);
+    } catch (err: any) {
+      console.error('Erro de autenticação anônima:', err);
+      setError('Erro no acesso anônimo: ' + err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleAuth = async () => {
     setLoading(true);
     setError(null);
     try {
       // Cria um email fictício usando o identificador, removendo caracteres inválidos
-      const sanitisedIdentifier = identifier.toLowerCase().replace(/[^a-zA-Z0-9]/g, '');
+      const sanitisedIdentifier = identifier.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
       
       if (!sanitisedIdentifier) {
         throw new Error("Identificador inválido.");
@@ -108,6 +133,14 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
           className="w-full bg-purple-600 text-white py-4 rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-lg shadow-purple-500/20 active:scale-95 transition-all flex items-center justify-center gap-3 disabled:opacity-50"
         >
           {loading ? 'Processando...' : (isRegistering ? 'Criar Acesso' : 'Entrar')}
+        </button>
+
+        <button
+          onClick={handleAnonymousAuth}
+          disabled={loading}
+          className="w-full bg-white text-gray-700 py-4 rounded-2xl font-bold text-xs uppercase tracking-[0.2em] border border-gray-200 active:scale-95 transition-all flex items-center justify-center gap-3 disabled:opacity-50"
+        >
+          Entrar como Visitante
         </button>
 
         <button
