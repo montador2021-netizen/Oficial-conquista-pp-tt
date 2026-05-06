@@ -459,17 +459,13 @@ const App: React.FC = () => {
       console.log("Saving targets:", newTargets);
       const targetId = (user && user.id !== 'user-default') ? `targets_${user.id}` : 'targets';
       
-      console.log("Upserting with targetId:", targetId);
+      console.log("Saving to Firestore with targetId:", targetId);
       
-      // Salva no Supabase (Online)
-      // Tenta ser mais específico com o objeto a ser salvo se necessário, mas upsert aceita o objeto completo
-      const { data, error } = await supabase.from('settings').upsert({ id: targetId, ...newTargets });
-      if (error) {
-        console.error("Supabase error detail:", error);
-        throw new Error(`Supabase error: ${error.message}${error.hint ? ' - ' + error.hint : ''}`);
-      }
+      // Salva no Firestore
+      const settingsRef = doc(db, 'settings', targetId);
+      await setDoc(settingsRef, newTargets, { merge: true });
       
-      console.log("Upsert success. Returned data:", data);
+      console.log("Upsert success to Firestore.");
 
       // Salva no localStorage (Offline)
       localStorage.setItem(TARGETS_KEY, JSON.stringify(newTargets));
@@ -483,7 +479,7 @@ const App: React.FC = () => {
       localStorage.setItem(TARGETS_KEY, JSON.stringify(newTargets));
       setTargets(newTargets);
       setActiveNav(NavItem.Resumos);
-      alert("Erro ao salvar metas online: " + (error instanceof Error ? error.message : String(error)));
+      alert("Erro ao salvar metas online no Firestore: " + (error instanceof Error ? error.message : String(error)));
     }
   };
 
