@@ -191,6 +191,17 @@ const App: React.FC = () => {
       localStorage.setItem(OPPORTUNITIES_KEY, JSON.stringify(updated));
       return updated;
     });
+    
+    // Persistir no Firestore
+    try {
+      const oppRef = doc(db, 'opportunities', updatedOpp.id);
+      await updateDoc(oppRef, updatedOpp as any);
+      console.log("Oportunidade atualizada no Firestore");
+    } catch (fbError) {
+      console.error("Erro ao atualizar no Firestore:", fbError);
+      alert("Erro ao salvar oportunidade no banco. Verifique as permissões.");
+    }
+    
     setEditingOpportunity(null);
   };
 

@@ -1,10 +1,11 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    
+
     // Helpers
     function isSignedIn() { return request.auth != null; }
-    function isOwner(data) { return isSignedIn() && request.auth.uid == data.vendedorId; }
+    function isValidId(id) { return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); }
+    function isOwner(vendedorId) { return isSignedIn() && request.auth.uid == vendedorId; }
 
     // Default-deny
     match /{document=**} {
