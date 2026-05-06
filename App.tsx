@@ -195,11 +195,11 @@ const App: React.FC = () => {
     // Persistir no Firestore
     try {
       const oppRef = doc(db, 'opportunities', updatedOpp.id);
-      await setDoc(oppRef, updatedOpp as any, { merge: true });
-      console.log("Oportunidade salva/atualizada no Firestore");
+      await updateDoc(oppRef, updatedOpp as any);
+      console.log("Oportunidade atualizada no Firestore");
     } catch (fbError) {
-      console.error("Erro ao salvar no Firestore:", fbError);
-      alert("Erro ao salvar no banco: " + (fbError instanceof Error ? fbError.message : String(fbError)));
+      console.error("Erro ao atualizar no Firestore:", fbError);
+      alert("Erro ao salvar oportunidade no banco. Verifique as permissões.");
     }
     
     setEditingOpportunity(null);
@@ -339,16 +339,13 @@ const App: React.FC = () => {
 
       try {
         // Metas agora podem ser individuais ou globais. Vamos tentar buscar por vendedorId primeiro.
-        const targetId = `targets_${user.id}`;
-        const targetDocRef = doc(db, 'settings', targetId);
-        const targetDoc = await getDoc(targetDocRef);
-        let targetsData = targetDoc.exists() ? targetDoc.data() : null;
+        let targetsQuery = supabase.from('settings').select('*').eq('id', `targets_${user.id}`).single();
+        let { data: targetsData } = await targetsQuery;
 
         if (!targetsData) {
           // Se não tiver individual, tenta a global
-          const globalTargetDocRef = doc(db, 'settings', 'targets');
-          const globalTargetDoc = await getDoc(globalTargetDocRef);
-          targetsData = globalTargetDoc.exists() ? globalTargetDoc.data() : null;
+          const { data: globalTargets } = await supabase.from('settings').select('*').eq('id', 'targets').single();
+          targetsData = globalTargets;
         }
 
         if (!targetsData) {
@@ -376,17 +373,14 @@ const App: React.FC = () => {
       }
 
       try {
-        let q = collection(db, 'customers');
-        let customersQuery = q;
+        let query = supabase.from('customers').select('*');
         if (!isAdmin) {
-          customersQuery = query(q, where('vendedorId', '==', user.id));
+          query = query.eq('vendedorId', user.id);
         } else if (viewingVendedorId) {
-          customersQuery = query(q, where('vendedorId', '==', viewingVendedorId));
+          query = query.eq('vendedorId', viewingVendedorId);
         }
 
-        const querySnapshot = await getDocs(customersQuery);
-        const customersData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() as any }));
-        
+        const { data: customersData } = await query;
         if (customersData) {
           setCustomers(customersData as Customer[]);
           localStorage.setItem(CUSTOMERS_KEY, JSON.stringify(customersData));
@@ -396,20 +390,19 @@ const App: React.FC = () => {
       }
       
       try {
-        console.log("Buscando oportunidades no Firestore...");
-        let q = collection(db, 'opportunities');
-        let oppsQuery = q;
+        console.log("Buscando oportunidades no Supabase...");
+        let query = supabase.from('opportunities').select('*');
         if (!isAdmin) {
-          oppsQuery = query(q, where('vendedorId', '==', user.id));
+          query = query.eq('vendedorId', user.id);
         } else if (viewingVendedorId) {
-          oppsQuery = query(q, where('vendedorId', '==', viewingVendedorId));
+          query = query.eq('vendedorId', viewingVendedorId);
         }
 
-        const querySnapshot = await getDocs(oppsQuery);
-        const oppsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() as any }));
+        const { data: oppsData, error: oppsError } = await query;
+        if (oppsError) throw oppsError;
         
         if (oppsData) {
-          console.log("Oportunidades brutas do Firestore:", oppsData);
+          console.log("Oportunidades brutas do DB:", oppsData);
           const mappedOpps = oppsData.map((o: any) => {
             const vId = o.vendedorId || o.vendedor_id || o.vendedorid || 'unknown';
             const pInt = o.productInterest || o.product_interest || o.interesse || '';
@@ -432,7 +425,7 @@ const App: React.FC = () => {
           });
           
           console.log("Oportunidades mapeadas finais:", mappedOpps);
-          if (mappedOpps.length > 0) {
+          if (mappedOpps.length > 0 || (localOpps && JSON.parse(localOpps).length === 0)) {
             setOpportunities(mappedOpps as Opportunity[]);
             localStorage.setItem(OPPORTUNITIES_KEY, JSON.stringify(mappedOpps));
           }
@@ -466,13 +459,17 @@ const App: React.FC = () => {
       console.log("Saving targets:", newTargets);
       const targetId = (user && user.id !== 'user-default') ? `targets_${user.id}` : 'targets';
       
-      console.log("Saving to Firestore with targetId:", targetId);
+      console.log("Upserting with targetId:", targetId);
       
-      // Salva no Firestore
-      const settingsRef = doc(db, 'settings', targetId);
-      await setDoc(settingsRef, newTargets, { merge: true });
+      // Salva no Supabase (Online)
+      // Tenta ser mais específico com o objeto a ser salvo se necessário, mas upsert aceita o objeto completo
+      const { data, error } = await supabase.from('settings').upsert({ id: targetId, ...newTargets });
+      if (error) {
+        console.error("Supabase error detail:", error);
+        throw new Error(`Supabase error: ${error.message}${error.hint ? ' - ' + error.hint : ''}`);
+      }
       
-      console.log("Upsert success to Firestore.");
+      console.log("Upsert success. Returned data:", data);
 
       // Salva no localStorage (Offline)
       localStorage.setItem(TARGETS_KEY, JSON.stringify(newTargets));
@@ -486,7 +483,7 @@ const App: React.FC = () => {
       localStorage.setItem(TARGETS_KEY, JSON.stringify(newTargets));
       setTargets(newTargets);
       setActiveNav(NavItem.Resumos);
-      alert("Erro ao salvar metas online no Firestore: " + (error instanceof Error ? error.message : String(error)));
+      alert("Erro ao salvar metas online: " + (error instanceof Error ? error.message : String(error)));
     }
   };
 
@@ -512,15 +509,15 @@ const App: React.FC = () => {
     }
 
     try {
-      await updateDoc(doc(db, 'vendas', sale.id), { status: 'cancelado' });
+      const { error } = await supabase.from('vendas').update({ status: 'cancelado' }).eq('id', sale.id);
+      if (error) throw error;
       // Atualizar estado local
       setSavedSales(prev => prev.map(s => s.id === sale.id ? { ...s, status: 'cancelado' } : s));
       // Atualizar localStorage
       const updatedSales = savedSales.map(s => s.id === sale.id ? { ...s, status: 'cancelado' } : s);
       localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedSales));
-      console.log("Venda cancelada no Firestore.");
     } catch (error) {
-      console.error("Erro ao cancelar venda no Firestore:", error);
+      console.error("Erro ao cancelar venda:", error);
     }
   };
 
@@ -722,31 +719,19 @@ const App: React.FC = () => {
       totalComprado: 0,
       pedidosCount: 0
     };
-    try {
-      await addDoc(collection(db, 'customers'), newCustomer);
-      console.log("Cliente adicionado ao Firestore.");
-    } catch (error) {
-      console.error("Erro ao adicionar cliente ao Firestore:", error);
-    }
+    const { error } = await supabase.from('customers').insert([newCustomer]);
+    if (error) console.error("Erro ao adicionar cliente:", error);
   };
 
   const deleteCustomer = async (id: string) => {
-    try {
-      await deleteDoc(doc(db, 'customers', id));
-      console.log("Cliente deletado do Firestore.");
-    } catch (error) {
-      console.error("Erro ao deletar cliente do Firestore:", error);
-    }
+    const { error } = await supabase.from('customers').delete().eq('id', id);
+    if (error) console.error("Erro ao deletar cliente:", error);
   };
 
   const updateCustomer = async (updated: Customer) => {
     const { id, ...data } = updated;
-    try {
-      await setDoc(doc(db, 'customers', id), data, { merge: true });
-      console.log("Cliente atualizado no Firestore.");
-    } catch (error) {
-      console.error("Erro ao atualizar cliente no Firestore:", error);
-    }
+    const { error } = await supabase.from('customers').update(data).eq('id', id);
+    if (error) console.error("Erro ao atualizar cliente:", error);
   };
 
   const renderContent = () => {
