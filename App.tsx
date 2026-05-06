@@ -195,10 +195,10 @@ const App: React.FC = () => {
     // Persistir no Firestore
     try {
       const oppRef = doc(db, 'opportunities', updatedOpp.id);
-      await updateDoc(oppRef, updatedOpp as any);
-      console.log("Oportunidade atualizada no Firestore");
+      await setDoc(oppRef, updatedOpp as any, { merge: true });
+      console.log("Oportunidade salva/atualizada no Firestore");
     } catch (fbError) {
-      console.error("Erro ao atualizar no Firestore:", fbError);
+      console.error("Erro ao salvar no Firestore:", fbError);
       alert("Erro ao salvar no banco: " + (fbError instanceof Error ? fbError.message : String(fbError)));
     }
     
