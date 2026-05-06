@@ -199,7 +199,7 @@ const App: React.FC = () => {
       console.log("Oportunidade atualizada no Firestore");
     } catch (fbError) {
       console.error("Erro ao atualizar no Firestore:", fbError);
-      alert("Erro ao salvar oportunidade no banco. Verifique as permissões.");
+      alert("Erro ao salvar no banco: " + (fbError instanceof Error ? fbError.message : String(fbError)));
     }
     
     setEditingOpportunity(null);
