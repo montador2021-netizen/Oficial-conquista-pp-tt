@@ -361,10 +361,8 @@ const App: React.FC = () => {
         setVendedores([]);
       }
 
-      // Carregar do localStorage primeiro para rapidez
-      const localOpps = localStorage.getItem(OPPORTUNITIES_KEY);
-      if (localOpps) setOpportunities(JSON.parse(localOpps));
-
+      // Carregar dados do Firestore diretamente
+      
       if (!supabase) return;
       
       console.log("Buscando dados no Supabase...");
@@ -386,16 +384,9 @@ const App: React.FC = () => {
         
         if (salesData) {
           const dbSales = salesData as Sale[];
-          const localSales = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-          
-          const salesMap = new Map();
-          dbSales.forEach(s => salesMap.set(s.id, s));
-          localSales.forEach((s: Sale) => salesMap.set(s.id, s));
-          
-          const mergedSales = Array.from(salesMap.values());
-          
-          setSavedSales(mergedSales);
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(mergedSales));
+          // Apenas usar dados do Firestore para evitar duplicatas e dados obsoletos do localStorage
+          setSavedSales(dbSales);
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(dbSales));
         }
       } catch (err) {
         console.error("Erro ao buscar vendas:", err);
@@ -467,8 +458,8 @@ const App: React.FC = () => {
         console.log("Oportunidades do Firestore:", oppsData);
         
         if (oppsData) {
-          const mappedOpps = oppsData.map((o: any) => {
-            console.log("Mapped Opportunity:", o);
+          const uniqueOpps = Array.from(new Map(oppsData.map(o => [o.id, o])).values());
+          const mappedOpps = uniqueOpps.map((o: any) => {
             return {
               ...o,
               user: typeof o.user === 'string' ? JSON.parse(o.user) : (o.user || { name: user.firstName, avatar: user.photoUrl || '' }),
