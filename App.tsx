@@ -537,7 +537,7 @@ const App: React.FC = () => {
 
     try {
       const saleRef = doc(db, 'vendas', sale.id);
-      await updateDoc(saleRef, { status: 'cancelado' });
+      await setDoc(saleRef, { status: 'cancelado' }, { merge: true });
       
       // Atualizar estado local
       setSavedSales(prev => prev.map(s => s.id === sale.id ? { ...s, status: 'cancelado' } : s));
