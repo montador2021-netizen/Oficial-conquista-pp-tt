@@ -1294,6 +1294,7 @@ const App: React.FC = () => {
       }
 
       savedSales.forEach(s => {
+        if (s.status === 'cancelado') return;
         if (Array.isArray(s.servicosExtras)) {
           s.servicosExtras.forEach(ex => {
             const match = ex.match(/(\d+)x (.+)/);
@@ -1305,6 +1306,11 @@ const App: React.FC = () => {
           });
         }
       });
+      
+      const bonusItem = serviceData.find(d => d.name === 'Bônus por Pedido');
+      if (bonusItem) {
+        bonusItem.count = savedSales.filter(s => s.status !== 'cancelado').length;
+      }
 
       const totalServiceBonus = serviceData.reduce((acc, d) => acc + (d.count * d.bonus), 0);
       const totalBonusPedido = targets.bonusPorPedido?.ativo ? (savedSales.filter(s => s.status !== 'cancelado').length * (targets.bonusPorPedido?.valor || 5)) : 0;
