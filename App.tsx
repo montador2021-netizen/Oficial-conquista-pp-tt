@@ -152,13 +152,17 @@ const App: React.FC = () => {
 
   const addOpportunity = async (oppData: Omit<Opportunity, 'id' | 'daysAgo' | 'user' | 'tags'>) => {
     console.log("Adicionando nova oportunidade:", oppData);
+    if (!user) {
+      alert("Erro: Usuário não autenticado.");
+      return;
+    }
     try {
       const newOpp: Opportunity = {
         ...oppData,
         id: typeof crypto.randomUUID === 'function' ? crypto.randomUUID() : `opp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-        vendedorId: user?.id || 'unknown',
+        vendedorId: user.id,
         daysAgo: 0,
-        user: { name: user?.firstName || 'Admin', avatar: user?.photoUrl || 'https://picsum.photos/seed/u1/40/40' },
+        user: { name: user.firstName || 'Admin', avatar: user.photoUrl || 'https://picsum.photos/seed/u1/40/40' },
         tags: []
       };
 
@@ -167,8 +171,7 @@ const App: React.FC = () => {
         await addDoc(collection(db, 'opportunities'), newOpp);
         console.log("Oportunidade salva no Firestore");
       } catch (fbError) {
-        console.error("Erro ao salvar no Firestore:", fbError);
-        alert("Erro ao salvar oportunidade: " + (fbError instanceof Error ? fbError.message : String(fbError)));
+        handleFirestoreError(fbError, OperationType.CREATE, 'opportunities');
       }
 
       // Atualizar estado local
@@ -180,7 +183,7 @@ const App: React.FC = () => {
       setIsAddingOpportunity(false);
     } catch (error) {
       console.error("Erro geral ao adicionar oportunidade:", error);
-      alert("Erro ao salvar card.");
+      alert("Erro ao salvar card: " + (error instanceof Error ? error.message : String(error)));
     }
   };
 
@@ -198,12 +201,65 @@ const App: React.FC = () => {
       await updateDoc(oppRef, updatedOpp as any);
       console.log("Oportunidade atualizada no Firestore");
     } catch (fbError) {
-      console.error("Erro ao atualizar no Firestore:", fbError);
-      alert("Erro ao salvar oportunidade no banco. Verifique as permissões.");
+      handleFirestoreError(fbError, OperationType.UPDATE, `opportunities/${updatedOpp.id}`);
     }
     
     setEditingOpportunity(null);
   };
+
+  const handleLogout = async () => {
+    await signOut(auth);
+    window.location.reload();
+  };
+
+  // Helper for Firestore Errors
+  enum OperationType {
+    CREATE = 'create',
+    UPDATE = 'update',
+    DELETE = 'delete',
+    LIST = 'list',
+    GET = 'get',
+    WRITE = 'write',
+  }
+
+  interface FirestoreErrorInfo {
+    error: string;
+    operationType: OperationType;
+    path: string | null;
+    authInfo: {
+      userId?: string | null;
+      email?: string | null;
+      emailVerified?: boolean | null;
+      isAnonymous?: boolean | null;
+      tenantId?: string | null;
+      providerInfo?: {
+        providerId?: string | null;
+        email?: string | null;
+      }[];
+    }
+  }
+
+  function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
+    const errInfo: FirestoreErrorInfo = {
+      error: error instanceof Error ? error.message : String(error),
+      authInfo: {
+        userId: auth.currentUser?.uid,
+        email: auth.currentUser?.email,
+        emailVerified: auth.currentUser?.emailVerified,
+        isAnonymous: auth.currentUser?.isAnonymous,
+        tenantId: auth.currentUser?.tenantId,
+        providerInfo: auth.currentUser?.providerData?.map(provider => ({
+          providerId: provider.providerId,
+          email: provider.email,
+        })) || []
+      },
+      operationType,
+      path
+    }
+    console.error('Firestore Error: ', JSON.stringify(errInfo));
+    alert('Erro de banco de dados: ' + JSON.stringify(errInfo));
+    throw new Error(JSON.stringify(errInfo));
+  }
 
   const handleNavSelect = (navItem: NavItem) => {
     setActiveNav(navItem);
@@ -536,11 +592,6 @@ const App: React.FC = () => {
     setSavedSales(updatedSales);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedSales));
     setSaleToDelete(null);
-  };
-
-  const handleLogout = async () => {
-    await signOut(auth);
-    window.location.reload();
   };
 
   const saveSale = async (newSaleData: any) => {
