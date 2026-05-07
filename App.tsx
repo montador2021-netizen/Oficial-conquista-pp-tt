@@ -116,6 +116,22 @@ const App: React.FC = () => {
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
   const [targets, setTargets] = useState<Targets>(DEFAULT_TARGETS);
+  const [animatingSaleId, setAnimatingSaleId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (animatingSaleId) {
+      const timer = setTimeout(() => {
+        const saleToOpen = savedSales.find(s => s.id === animatingSaleId);
+        if (saleToOpen) setSelectedSale(saleToOpen);
+        setAnimatingSaleId(null);
+      }, 500); // 500ms de delay
+      return () => clearTimeout(timer);
+    }
+  }, [animatingSaleId, savedSales]);
+
+  const handleSaleClick = (sale: Sale) => {
+    setAnimatingSaleId(sale.id);
+  };
 
   const logAccess = async (currentUser: User) => {
     // if (!supabase || currentUser.id === 'anon-default') return;
@@ -1946,9 +1962,9 @@ const App: React.FC = () => {
              return (
                <div key={i} className="bg-white p-5 rounded-2xl border border-gray-200 flex justify-between items-center shadow-sm hover:shadow-md transition-shadow">
                  <motion.button 
-                   whileTap={{ scale: 0.9, backgroundColor: "#e9d5ff" }}
-                   onClick={() => setSelectedSale(sale)}
-                   className="flex flex-col text-left hover:opacity-70 transition-opacity p-2 rounded-xl"
+                   onClick={() => handleSaleClick(sale)}
+                   animate={animatingSaleId === sale.id ? { backgroundColor: "#e9d5ff" } : {}}
+                   className={`flex flex-col text-left hover:opacity-70 transition-opacity p-2 rounded-xl ${animatingSaleId === sale.id ? 'bg-purple-200' : ''}`}
                  >
                      <span className="text-[10px] font-black text-purple-600 underline decoration-purple-200 underline-offset-4">#{sale.numeroPedido || '---'}</span>
                      <span className="text-[8px] font-bold text-gray-400 uppercase mt-0.5">{sale.data || '---'}</span>
