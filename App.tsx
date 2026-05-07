@@ -1945,13 +1945,14 @@ const App: React.FC = () => {
              if (!sale) return null;
              return (
                <div key={i} className="bg-white p-5 rounded-2xl border border-gray-200 flex justify-between items-center shadow-sm hover:shadow-md transition-shadow">
-                  <button 
-                    onClick={() => setSelectedSale(sale)}
-                    className="flex flex-col text-left hover:opacity-70 transition-opacity"
-                  >
+                 <motion.button 
+                   whileTap={{ scale: 0.9, backgroundColor: "#e9d5ff" }}
+                   onClick={() => setSelectedSale(sale)}
+                   className="flex flex-col text-left hover:opacity-70 transition-opacity p-2 rounded-xl"
+                 >
                      <span className="text-[10px] font-black text-purple-600 underline decoration-purple-200 underline-offset-4">#{sale.numeroPedido || '---'}</span>
                      <span className="text-[8px] font-bold text-gray-400 uppercase mt-0.5">{sale.data || '---'}</span>
-                  </button>
+                  </motion.button>
                   <div className="text-right">
                      <div className="text-[11px] font-black text-emerald-600">{formatBRL(sale.bonusTotal)}</div>
                      <div className="text-[8px] font-bold text-gray-400 uppercase">Bônus</div>
