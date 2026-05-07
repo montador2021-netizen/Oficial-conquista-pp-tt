@@ -32,7 +32,6 @@ const SaleForm: React.FC<SaleFormProps> = ({ onCancel, onSubmit, customers, targ
   const firstInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    console.log("SaleForm targets:", targets);
     setTotal(produto + assistencia + impermeabilizacao);
   }, [produto, assistencia, impermeabilizacao]);
 
