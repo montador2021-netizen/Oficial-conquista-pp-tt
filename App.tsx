@@ -168,7 +168,7 @@ const App: React.FC = () => {
 
       // Salvar no Firestore
       try {
-        await addDoc(collection(db, 'opportunities'), newOpp);
+        await setDoc(doc(db, 'opportunities', newOpp.id), newOpp);
         console.log("Oportunidade salva no Firestore");
       } catch (fbError) {
         handleFirestoreError(fbError, OperationType.CREATE, 'opportunities');
@@ -198,8 +198,8 @@ const App: React.FC = () => {
     // Persistir no Firestore
     try {
       const oppRef = doc(db, 'opportunities', updatedOpp.id);
-      await updateDoc(oppRef, updatedOpp as any);
-      console.log("Oportunidade atualizada no Firestore");
+      await setDoc(oppRef, updatedOpp as any, { merge: true });
+      console.log("Oportunidade atualizada/criada no Firestore");
     } catch (fbError) {
       handleFirestoreError(fbError, OperationType.UPDATE, `opportunities/${updatedOpp.id}`);
     }
@@ -486,9 +486,9 @@ const App: React.FC = () => {
 
   const saveTargets = async (newTargets: Targets) => {
     console.log("App: Tentando salvar targets:", newTargets);
+    const targetId = (user && user.id !== 'user-default') ? `targets_${user.id}` : 'targets';
     try {
       console.log("Saving targets:", newTargets);
-      const targetId = (user && user.id !== 'user-default') ? `targets_${user.id}` : 'targets';
       
       console.log("Upserting with targetId:", targetId);
       
@@ -505,7 +505,7 @@ const App: React.FC = () => {
       setActiveNav(NavItem.Resumos);
       console.log("Targets saved successfully to", targetId);
     } catch (error) {
-      console.error("Error saving targets:", error);
+      console.error("Error saving targets:", error, "targetId:", targetId, "user.id:", user?.id);
       // Mesmo com erro no Firebase, salva no localStorage para garantir offline
       localStorage.setItem(TARGETS_KEY, JSON.stringify(newTargets));
       setTargets(newTargets);
