@@ -66,7 +66,7 @@ const OpportunityEditForm: React.FC<OpportunityEditFormProps> = ({ opportunity, 
           </div>
           <div className="space-y-1">
             <label className="text-[10px] font-black text-gray-500 uppercase">Valor Estimado (R$)</label>
-            <input type="text" placeholder="R$ 0,00" value={displayValue} onChange={handleValueChange} className="w-full bg-white border border-gray-300 p-3 rounded-xl outline-none text-gray-900 placeholder-gray-400 focus:border-purple-500" />
+            <input type="text" inputMode="decimal" placeholder="R$ 0,00" value={displayValue} onChange={handleValueChange} className="w-full bg-white border border-gray-300 p-3 rounded-xl outline-none text-gray-900 placeholder-gray-400 focus:border-purple-500" />
           </div>
           <button type="submit" className="w-full py-4 bg-purple-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 shadow-lg shadow-purple-500/20">
             <Save size={18} /> Salvar Alterações
