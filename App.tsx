@@ -214,6 +214,7 @@ const App: React.FC = () => {
     // Persistir no Firestore
     try {
       const oppRef = doc(db, 'opportunities', updatedOpp.id);
+      console.log("Saving to Firestore:", updatedOpp);
       await setDoc(oppRef, updatedOpp as any, { merge: true });
       console.log("Oportunidade atualizada/criada no Firestore");
     } catch (fbError) {
@@ -467,6 +468,7 @@ const App: React.FC = () => {
         
         if (oppsData) {
           const mappedOpps = oppsData.map((o: any) => {
+            console.log("Mapped Opportunity:", o);
             return {
               ...o,
               user: typeof o.user === 'string' ? JSON.parse(o.user) : (o.user || { name: user.firstName, avatar: user.photoUrl || '' }),
