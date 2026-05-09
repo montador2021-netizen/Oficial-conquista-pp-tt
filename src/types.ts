@@ -4,8 +4,7 @@ export interface User {
   lastName: string;
   store: string;
   password: string;
-  role: 'supervisor' | 'manager' | 'vendedor';
-  branchId?: string;
+  role: 'vendedor' | 'admin';
   photoUrl?: string;
   lastLogin?: string;
 }

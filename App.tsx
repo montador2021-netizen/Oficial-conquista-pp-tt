@@ -1,7 +1,5 @@
 
-import ManagerDashboard from './components/ManagerDashboard';
 import React, { useState, useEffect, useMemo } from 'react';
-import { getUserPermissions } from './src/services/userService';
 import { User, AccessLog } from './src/types';
 import SaleForm from './components/SaleForm';
 import Settings from './components/Settings';
@@ -179,7 +177,6 @@ const App: React.FC = () => {
         ...oppData,
         id: typeof crypto.randomUUID === 'function' ? crypto.randomUUID() : `opp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         vendedorId: user.id,
-        branchId: user.branchId,
         daysAgo: 0,
         user: { name: user.firstName || 'Admin', avatar: user.photoUrl || 'https://picsum.photos/seed/u1/40/40' },
         tags: []
@@ -286,17 +283,15 @@ const App: React.FC = () => {
   };
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (user) {
-        const permissions = await getUserPermissions(user.email || '');
         const appUser: User = {
           id: user.uid,
           firstName: user.displayName?.split(' ')[0] || 'Usuário',
           lastName: user.displayName?.split(' ').slice(1).join(' ') || '',
-          store: permissions?.branchId || 'Loja Padrão',
+          store: 'Loja Padrão',
           password: 'firebase-auth-user',
-          role: permissions?.role || 'vendedor',
-          branchId: permissions?.branchId,
+          role: 'vendedor',
           lastLogin: new Date().toISOString(),
           photoUrl: user.photoURL ?? undefined
         };
@@ -786,9 +781,6 @@ const App: React.FC = () => {
   };
 
   const renderContent = () => {
-    if ((user?.role === 'manager' || user?.role === 'supervisor') && activeNav === NavItem.Resumos) {
-      return <ManagerDashboard user={user} opportunities={opportunities} savedSales={savedSales} />;
-    }
     if (activeNav === NavItem.Resumos) {
       return (
         <motion.div 
