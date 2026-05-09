@@ -8,7 +8,8 @@
         "id": { "type": "string" },
         "title": { "type": "string" },
         "stage": { "type": "string" },
-        "vendedorId": { "type": "string" }
+        "vendedorId": { "type": "string" },
+        "branchId": { "type": "string" }
       },
       "required": ["id", "title", "stage"]
     },
@@ -20,9 +21,21 @@
         "id": { "type": "string" },
         "numeroPedido": { "type": "string" },
         "total": { "type": "number" },
-        "vendedorId": { "type": "string" }
+        "vendedorId": { "type": "string" },
+        "branchId": { "type": "string" }
       },
       "required": ["id", "numeroPedido", "total"]
+    },
+    "UserPermission": {
+      "title": "UserPermission",
+      "description": "User role and branch assignment",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string" },
+        "role": { "type": "string", "enum": ["supervisor", "manager", "vendor"] },
+        "branchId": { "type": "string" }
+      },
+      "required": ["email", "role"]
     }
   },
   "firestore": {
@@ -33,6 +46,10 @@
     "vendas/{vendaId}": {
       "schema": "Sale",
       "description": "Sales records"
+    },
+    "permissions/{email}": {
+      "schema": "UserPermission",
+      "description": "User permission mappings"
     }
   }
 }
